@@ -357,8 +357,6 @@ NIKE_STYLE_CODES = [
     "FV5104-100",  # Low University Blue
     # Nike Air Max
     "HJ5996-001",  # Women's Air Max 95 Pink Foam
-]
-
     # Air Jordan 4
     "FQ8138-006",  # Bred Reimagined 2024
     "AQ3816-006",  # Military Blue 2024
