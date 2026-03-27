@@ -123,6 +123,24 @@ AMAZON_PRODUCTS = [
     # Near-free / freebie-prone
     "https://www.amazon.com/Reusable-Produce-Bags-Mesh-Bags/dp/B07DXT9N3V",
     "https://www.amazon.com/Sincere-Tonight-Resistance-Bands-Workout/dp/B07Q6Y5JLP",
+    # High-coupon frequency — phone accessories
+    "https://www.amazon.com/Anker-Magnetic-Wireless-Foldable-Charging/dp/B09K3WQ2QD",
+    "https://www.amazon.com/Anker-Certified-Lightning-Compatible-AirPods/dp/B07K97LWRN",
+    "https://www.amazon.com/Spigen-Rugged-Armor-Designed-iPhone/dp/B0CKWN5K66",
+    "https://www.amazon.com/TORRAS-Compatible-iPhone-15-Case/dp/B0C7GP2Q3D",
+    # USB hubs & cables (frequent flash coupons)
+    "https://www.amazon.com/Anker-PowerExpand-Aluminum-Thunderbolt-Charging/dp/B08C9HZ6Y6",
+    "https://www.amazon.com/uni-USB-C-Hub-Adapter/dp/B075XNWRQX",
+    # SD cards & storage (big % coupons)
+    "https://www.amazon.com/SanDisk-Ultra-MicroSDXC-Memory-Adapter/dp/B08GY9NYRM",
+    "https://www.amazon.com/Samsung-MicroSDXC-Memory-Adapter-MB-ME256KA/dp/B09B1J5PJN",
+    # Smart plugs & lights (freebie territory with Subscribe & Save)
+    "https://www.amazon.com/Kasa-Smart-Plug-Ultra-Mini/dp/B08LN3C7WK",
+    "https://www.amazon.com/Govee-Smart-Light-Bulbs-Works/dp/B09L5JFMMD",
+    "https://www.amazon.com/Govee-RGBIC-Smart-LED-Strip/dp/B09NQTJ5JV",
+    # Personal care (Subscribe & Save freebies)
+    "https://www.amazon.com/Gillette-Fusion5-Razor-Blade-Refills/dp/B01N5TCKZF",
+    "https://www.amazon.com/Colgate-Whitening-Toothpaste-Total-Whitening/dp/B07XZFD5JR",
 ]
 
 # ── Best Buy ──────────────────────────────────────────────────────────────────
@@ -339,6 +357,39 @@ NIKE_STYLE_CODES = [
     "FV5104-100",  # Low University Blue
     # Nike Air Max
     "HJ5996-001",  # Women's Air Max 95 Pink Foam
+]
+
+    # Air Jordan 4
+    "FQ8138-006",  # Bred Reimagined 2024
+    "AQ3816-006",  # Military Blue 2024
+    "DH6927-111",  # White Thunder
+    "CT8527-016",  # Black Canvas
+    "HF0747-141",  # Fear Pack 2025
+    "IB2772-101",  # Metallic Green 2025
+    # Air Jordan 5
+    "DD0587-140",  # White Cement 2025
+    "HF0731-100",  # Aqua 2025
+    "FN7405-001",  # Olive 2024
+    # Air Jordan 6
+    "CT8529-162",  # Reverse Oreo 2025
+    "IH6010-100",  # Georgetown 2025
+    # Air Jordan 12
+    "CT8013-006",  # Black Taxi 2024
+    "FV6126-106",  # Field Purple 2025
+    # Dunk Low
+    "DD1391-100",  # Panda (restock)
+    "FB7173-001",  # Black White 2024
+    "FZ5765-001",  # Year of the Snake 2025
+    "HF0461-001",  # Georgetown 2025
+    # Air Force 1
+    "CW2288-111",  # White (restock)
+    "FV0383-001",  # Year of the Snake 2025
+    # Travis Scott collabs
+    "DM7866-104",  # Travis Scott x Fragment Dunk Low
+    "HF4628-001",  # Travis Scott x Air Max 1 2025
+    # Other heat
+    "HF9982-001",  # Air Max 97 Year of the Snake 2025
+    "FB9109-200",  # Air Max Plus OG Desert Sand 2025
 ]
 
 # SNKRS channel ID — filters to SNKRS-exclusive drops

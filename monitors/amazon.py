@@ -184,6 +184,7 @@ class AmazonMonitor(BaseMonitor):
                 discount_pct=pct_str or "N/A",
                 coupon=coupon_text or "",
                 image=image,
+                is_freebie=is_freebie,
                 extra_fields=[{"name": "🔑 ASIN", "value": asin, "inline": True}],
             )
             notify[cooldown_key]  = time.time()

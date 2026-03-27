@@ -111,20 +111,29 @@ async def send_deal_alert(
     coupon: str = "",
     image: str = "",
     extra_fields: Optional[list[dict]] = None,
+    is_freebie: bool = False,
 ) -> bool:
-    emoji = "🔥" if not coupon else "🎟️"
-    title = f"{emoji} {name}"
-    description = ""
-    if coupon:
-        description = f"**Coupon code:** `{coupon}`"
+    if is_freebie:
+        emoji = "🆓"
+        title = f"🆓 FREEBIE — {name}"
+        description = "@here **This item is FREE or near-free! Grab it before it's gone.**"
+    elif coupon:
+        emoji = "🎟️"
+        title = f"🎟️ COUPON DEAL — {name}"
+        description = f"**Clip the coupon before checkout:** `{coupon}`"
+    else:
+        emoji = "🔥"
+        title = f"🔥 PRICE DROP — {name}"
+        description = ""
 
     fields = [
-        {"name": "💰 Price",    "value": price,          "inline": True},
-        {"name": "~~Was~~",     "value": f"~~{original_price}~~", "inline": True},
-        {"name": "📉 Off",      "value": discount_pct,   "inline": True},
+        {"name": "💰 Sale Price",     "value": f"**{price}**",              "inline": True},
+        {"name": "📦 Original Price", "value": f"~~{original_price}~~",     "inline": True},
+        {"name": "📉 Savings",        "value": f"**{discount_pct}**",        "inline": True},
     ]
     if coupon:
-        fields.append({"name": "🎟️ Coupon", "value": f"`{coupon}`", "inline": True})
+        fields.append({"name": "🎟️ Coupon Code", "value": f"`{coupon}`", "inline": True})
+    fields.append({"name": "🛒 Buy Now", "value": f"[Click here to purchase]({url})", "inline": False})
     if extra_fields:
         fields.extend(extra_fields)
 
@@ -135,7 +144,7 @@ async def send_deal_alert(
         description=description,
         store=store,
         fields=fields,
-        thumbnail_url=image,
+        image_url=image,
     )
 
 
@@ -149,17 +158,22 @@ async def send_restock_alert(
     image: str = "",
     extra_fields: Optional[list[dict]] = None,
 ) -> bool:
-    fields = [{"name": "💰 Price", "value": price, "inline": True}]
+    fields = [
+        {"name": "💰 Price", "value": f"**{price}**", "inline": True},
+        {"name": "📊 Status", "value": "✅ **In Stock**", "inline": True},
+        {"name": "🛒 Buy Now", "value": f"[Click here to purchase]({url})", "inline": False},
+    ]
     if extra_fields:
         fields.extend(extra_fields)
 
     return await send_embed(
         webhook_url,
-        title=f"🔔 Back in Stock — {name}",
+        title=f"🔔 RESTOCK — {name}",
         url=url,
+        description="@here **Item is back in stock! Limited quantities available.**",
         store=store,
         fields=fields,
-        thumbnail_url=image,
+        image_url=image,
         colour=0x57F287,  # green
     )
 
@@ -174,21 +188,31 @@ async def send_nike_drop(
     style_code: str,
     image: str = "",
     upcoming: bool = False,
+    drop_date: str = "",
 ) -> bool:
-    title = f"{'📅' if upcoming else '👟'} {'Upcoming' if upcoming else 'LIVE'} — {name}"
+    if upcoming:
+        title = f"📅 UPCOMING DROP — {name}"
+        description = f"⏰ **Drop Date:** {drop_date}" if drop_date else "📅 **Coming Soon to SNKRS**"
+    else:
+        title = f"👟 LIVE NOW — {name}"
+        description = "@here **Drop is LIVE on SNKRS! Enter now before it sells out.**"
+
     fields = [
-        {"name": "💰 Retail",    "value": price,      "inline": True},
-        {"name": "🔑 Style",     "value": style_code, "inline": True},
+        {"name": "💰 Retail Price", "value": f"**{price}**", "inline": True},
+        {"name": "🔑 Style Code",   "value": f"`{style_code}`", "inline": True},
     ]
     if sizes:
-        fields.append({"name": "📐 Sizes", "value": ", ".join(sizes[:20]), "inline": False})
+        available = ", ".join(sizes[:20])
+        fields.append({"name": f"📐 Available Sizes ({len(sizes)})", "value": available, "inline": False})
+    fields.append({"name": "📱 Enter on SNKRS", "value": f"[Open in SNKRS App]({url})", "inline": False})
 
     return await send_embed(
         webhook_url,
         title=title,
         url=url,
+        description=description,
         store="nike",
         fields=fields,
-        thumbnail_url=image,
+        image_url=image,
         colour=0x57F287 if not upcoming else 0xFEE75C,
     )
