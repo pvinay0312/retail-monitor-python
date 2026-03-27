@@ -8,3 +8,4 @@ node_modules/
 *.log
 logs/
 .DS_Store
+set_railway_vars.sh
