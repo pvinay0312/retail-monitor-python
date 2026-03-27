@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.11-slim-bookworm
 
 # Install system deps for Playwright + curl_cffi
 RUN apt-get update && apt-get install -y \
