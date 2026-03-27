@@ -138,6 +138,7 @@ class NikeSnkrsMonitor(BaseMonitor):
 
                 elif launch_status in UPCOMING_STATUSES and key not in seen:
                     price_str = f"${price:.0f}" if price else "N/A"
+                    drop_date = _extract_drop_date(pi, props)
                     log.info("[Nike SNKRS] UPCOMING: %s | %s", title, style)
                     await send_nike_drop(
                         UPCOMING_DROPS_WEBHOOK_URL,
@@ -145,6 +146,7 @@ class NikeSnkrsMonitor(BaseMonitor):
                         price=price_str, sizes=sizes,
                         style_code=style, image=image,
                         upcoming=True,
+                        drop_date=drop_date,
                     )
                     seen[key] = True
 
@@ -204,6 +206,19 @@ class NikeSnkrsMonitor(BaseMonitor):
                         )
                         notify[style_code] = time.time()
 
+                    elif launch_status in UPCOMING_STATUSES and style_code not in status:
+                        price_str = f"${price:.0f}" if price else "N/A"
+                        drop_date = _extract_drop_date(pi, {})
+                        log.info("[Nike SNKRS] WATCHLIST UPCOMING: %s | %s", style_code, title)
+                        await send_nike_drop(
+                            UPCOMING_DROPS_WEBHOOK_URL,
+                            name=title, url=product_url,
+                            price=price_str, sizes=sizes,
+                            style_code=style_code, image=image,
+                            upcoming=True,
+                            drop_date=drop_date,
+                        )
+
                     status[style_code] = launch_status
 
             except Exception as exc:
@@ -235,3 +250,26 @@ def _extract_image(pi: dict) -> str:
         return imgs.get("portraitURL", "") or imgs.get("squarishURL", "")
     except Exception:
         return ""
+
+
+def _extract_drop_date(pi: dict, props: dict) -> str:
+    """Return a human-readable drop date/time string, or empty string if unknown."""
+    import datetime
+    # Try launchView startEntryDate (most precise — includes time)
+    for source in (pi.get("launchView", {}), props.get("launchView", {})):
+        raw = source.get("startEntryDate") or source.get("startDate") or source.get("publishStartDate")
+        if raw:
+            try:
+                dt = datetime.datetime.fromisoformat(raw.replace("Z", "+00:00"))
+                return dt.strftime("%b %d, %Y at %I:%M %p ET")
+            except Exception:
+                return raw
+    # Fallback: publishStartDate at top-level props
+    raw = props.get("publishStartDate") or props.get("startDate")
+    if raw:
+        try:
+            dt = datetime.datetime.fromisoformat(raw.replace("Z", "+00:00"))
+            return dt.strftime("%b %d, %Y at %I:%M %p ET")
+        except Exception:
+            return raw
+    return ""

@@ -190,21 +190,30 @@ async def send_nike_drop(
     upcoming: bool = False,
     drop_date: str = "",
 ) -> bool:
+    stockx_query = name.replace(" ", "%20")
+    stockx_url = f"https://stockx.com/search/sneakers?s={stockx_query}"
+
     if upcoming:
         title = f"📅 UPCOMING DROP — {name}"
-        description = f"⏰ **Drop Date:** {drop_date}" if drop_date else "📅 **Coming Soon to SNKRS**"
+        description = "@here **New drop announced on SNKRS! Mark your calendar.**"
     else:
         title = f"👟 LIVE NOW — {name}"
         description = "@here **Drop is LIVE on SNKRS! Enter now before it sells out.**"
 
     fields = [
-        {"name": "💰 Retail Price", "value": f"**{price}**", "inline": True},
-        {"name": "🔑 Style Code",   "value": f"`{style_code}`", "inline": True},
+        {"name": "💰 Retail Price",  "value": f"**{price}**",       "inline": True},
+        {"name": "🔑 Style Code",    "value": f"`{style_code}`",     "inline": True},
     ]
+    if drop_date:
+        fields.append({"name": "📅 Release Date", "value": f"**{drop_date}**", "inline": False})
     if sizes:
         available = ", ".join(sizes[:20])
         fields.append({"name": f"📐 Available Sizes ({len(sizes)})", "value": available, "inline": False})
-    fields.append({"name": "📱 Enter on SNKRS", "value": f"[Open in SNKRS App]({url})", "inline": False})
+    fields.append({
+        "name": "🔗 Links",
+        "value": f"[Enter on SNKRS]({url})  •  [Check Resell on StockX]({stockx_url})",
+        "inline": False,
+    })
 
     return await send_embed(
         webhook_url,
