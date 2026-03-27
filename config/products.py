@@ -141,6 +141,41 @@ AMAZON_PRODUCTS = [
     # Personal care (Subscribe & Save freebies)
     "https://www.amazon.com/Gillette-Fusion5-Razor-Blade-Refills/dp/B01N5TCKZF",
     "https://www.amazon.com/Colgate-Whitening-Toothpaste-Total-Whitening/dp/B07XZFD5JR",
+    # Gardening
+    "https://www.amazon.com/Fiskars-Bypass-Pruning-Shears-Gardening/dp/B00004SD5U",
+    "https://www.amazon.com/Garden-Hose-Expandable-50ft/dp/B078WGVGKY",
+    "https://www.amazon.com/Miracle-Gro-Performance-Organics-Purpose/dp/B07BKCZR2N",
+    "https://www.amazon.com/Scotts-Turf-Builder-Lawn-Food/dp/B000N4FKQG",
+    "https://www.amazon.com/VIVOSUN-Hydroponic-Grow-Tent-Mylar/dp/B075BWFGKZ",
+    "https://www.amazon.com/Rain-Bird-ST8I-WiFi-Smart-Irrigation/dp/B07BGYX2TZ",
+    "https://www.amazon.com/Keter-Cortina-Outdoor-Storage-Resin/dp/B09Q4YFZTT",
+    # Furniture
+    "https://www.amazon.com/AmazonBasics-Classic-Solid-Wood-Folding/dp/B073ZVZQ6Z",
+    "https://www.amazon.com/Flash-Furniture-Adjustable-Ergonomic-Swivel/dp/B08BFNRM4N",
+    "https://www.amazon.com/Hbada-Ergonomic-Office-Chair-Support/dp/B07SDMFCH2",
+    "https://www.amazon.com/SONGMICS-Storage-Ottoman-Footstool-ULSF002/dp/B06XGJ2GGN",
+    "https://www.amazon.com/Christopher-Knight-Home-Accent-Chair/dp/B07BFHF14N",
+    "https://www.amazon.com/Zinus-Oluwafemi-Upholstered-Platform-Mattress/dp/B072BSTNCY",
+    # Electric bikes & scooters
+    "https://www.amazon.com/Lectric-XP-Trike-Electric-Bike/dp/B0BTTQPG76",
+    "https://www.amazon.com/Razor-E300-Electric-Scooter-Black/dp/B000BGJPNW",
+    "https://www.amazon.com/Segway-Ninebot-Electric-Kick-Scooter/dp/B07K7XCLPD",
+    "https://www.amazon.com/Gotrax-GXL-V2-Commuting-Electric/dp/B07J7MNKGZ",
+    "https://www.amazon.com/Hiboy-S2-Electric-Scooter-Adults/dp/B07YQLM1X9",
+    # More gaming
+    "https://www.amazon.com/PlayStation-5-Console-CFI-2015A01X/dp/B0CL5KNB9M",
+    "https://www.amazon.com/Xbox-Series-S-Robot-White/dp/B08G9J44ZN",
+    "https://www.amazon.com/SteelSeries-Arctis-Nova-Pro-Wireless/dp/B09ZMYBSZP",
+    "https://www.amazon.com/Turtle-Beach-Stealth-Gaming-Headset/dp/B09WFKWC2F",
+    "https://www.amazon.com/Xbox-Wireless-Controller-Carbon-Black/dp/B08DF26MLL",
+    "https://www.amazon.com/Backbone-One-Mobile-Gaming-Controller/dp/B09BTZX5MK",
+    # More electronics
+    "https://www.amazon.com/Samsung-Galaxy-S24-Ultra-Smartphone/dp/B0CMDWC436",
+    "https://www.amazon.com/Google-Pixel-8-Pro-Smartphone/dp/B0CGJ5JHF4",
+    "https://www.amazon.com/Sony-WF-1000XM5-Canceling-Headphones/dp/B0C33XXS56",
+    "https://www.amazon.com/Bose-QuietComfort-Earbuds-Wireless/dp/B08WM3GJ5Z",
+    "https://www.amazon.com/DJI-Mini-4-Pro-Drone/dp/B0CF9GQMJP",
+    "https://www.amazon.com/GoPro-HERO12-Black-Waterproof-Stabilization/dp/B0CDP3XGHQ",
 ]
 
 # ── Best Buy ──────────────────────────────────────────────────────────────────
@@ -180,6 +215,24 @@ BESTBUY_PRODUCTS = [
     # Appliances
     "https://www.bestbuy.com/site/dyson-v8-cordless-vacuum/6545258.p",
     "https://www.bestbuy.com/site/instant-pot-duo-7-in-1-electric-pressure-cooker-6-quart/6494977.p",
+    # Gaming accessories
+    "https://www.bestbuy.com/site/xbox-wireless-controller-carbon-black/6430655.p",
+    "https://www.bestbuy.com/site/steelseries-arctis-nova-pro-wireless-gaming-headset/6502647.p",
+    "https://www.bestbuy.com/site/razer-blackshark-v2-pro-wireless-gaming-headset/6457401.p",
+    "https://www.bestbuy.com/site/nintendo-switch-pro-controller/6080398.p",
+    # Electric bikes & scooters
+    "https://www.bestbuy.com/site/segway-ninebot-kickscooter-e2-plus/6507490.p",
+    "https://www.bestbuy.com/site/rad-power-bikes-radrunner-3-plus-electric-utility-bike/6571234.p",
+    # Monitors & displays
+    "https://www.bestbuy.com/site/lg-27-class-ultragear-qhd-ips-1ms-165hz-gaming-monitor/6524201.p",
+    "https://www.bestbuy.com/site/samsung-27-odyssey-g5-gaming-monitor/6401570.p",
+    "https://www.bestbuy.com/site/dell-27-gaming-monitor-s2722dgm/6457707.p",
+    # Cameras & drones
+    "https://www.bestbuy.com/site/dji-mini-4-pro-fly-more-combo-drone/6560191.p",
+    "https://www.bestbuy.com/site/gopro-hero12-black/6548994.p",
+    # Furniture & home office
+    "https://www.bestbuy.com/site/insignia-adjustable-standing-desk/6502328.p",
+    "https://www.bestbuy.com/site/ergotron-lx-desk-mount-lcd-monitor-arm/4890920.p",
 ]
 
 # ── Walmart ───────────────────────────────────────────────────────────────────
@@ -213,6 +266,27 @@ WALMART_PRODUCTS = [
     # Toys
     "https://www.walmart.com/ip/LEGO-City-Police-Station-60316/1388823900",
     "https://www.walmart.com/ip/LEGO-Creator-3-in-1-Exotic-Parrot-31136/4006938900",
+    # Gardening
+    "https://www.walmart.com/ip/Better-Homes-Gardens-6-Piece-Outdoor-Furniture-Set/974049092",
+    "https://www.walmart.com/ip/Miracle-Gro-All-Purpose-Garden-Soil-2-cu-ft/46905453",
+    "https://www.walmart.com/ip/Sun-Joe-Electric-Pressure-Washer/535953102",
+    "https://www.walmart.com/ip/Craftsman-V20-20V-Cordless-Leaf-Blower/856107782",
+    # Furniture
+    "https://www.walmart.com/ip/Mainstays-Belden-Park-Fabric-Multiple-Colors/993678890",
+    "https://www.walmart.com/ip/Mainstays-Adjustable-Height-Standing-Desk/2241977856",
+    "https://www.walmart.com/ip/Homefort-Big-Tall-400lb-Office-Chair/2194812695",
+    "https://www.walmart.com/ip/Zinus-12-Inch-Green-Tea-Memory-Foam-Mattress/46894470",
+    # Electric bikes & scooters
+    "https://www.walmart.com/ip/Gotrax-GXL-V2-Electric-Scooter/362804916",
+    "https://www.walmart.com/ip/Hover-1-Alpha-Electric-Kick-Scooter/633537438",
+    "https://www.walmart.com/ip/Jetson-Bolt-Pro-Folding-Electric-Bike/488759278",
+    # Electronics
+    "https://www.walmart.com/ip/Samsung-55-Class-4K-Crystal-UHD-Smart-TV/989571551",
+    "https://www.walmart.com/ip/Samsung-Galaxy-Tab-A8-10-5-64GB/958255933",
+    "https://www.walmart.com/ip/DJI-Mini-3-Drone/1515453614",
+    # More gaming
+    "https://www.walmart.com/ip/Xbox-Series-S-512GB-All-Digital-Console/408062341",
+    "https://www.walmart.com/ip/Meta-Quest-2-128GB-Advanced-VR-Headset/521108397",
 ]
 
 # ── Target ────────────────────────────────────────────────────────────────────
@@ -252,6 +326,28 @@ TARGET_PRODUCTS = [
     # Fitness
     "https://www.target.com/p/fit-simplify-resistance-loop-exercise-bands-set-of-5/-/A-84388065",
     "https://www.target.com/p/liquid-i-v-hydration-multiplier-16-stick-packs/-/A-79939625",
+    # Gardening
+    "https://www.target.com/p/fiskars-bypass-pruning-shears/-/A-13467492",
+    "https://www.target.com/p/miracle-gro-all-purpose-garden-soil-2cu-ft/-/A-13394878",
+    "https://www.target.com/p/sun-joe-electric-pressure-washer/-/A-80706721",
+    "https://www.target.com/p/hose-nozzle-spray-garden-heavy-duty/-/A-84558028",
+    # Furniture
+    "https://www.target.com/p/threshold-upholstered-accent-chair/-/A-83610696",
+    "https://www.target.com/p/mainstays-adjustable-height-standing-desk/-/A-86891564",
+    "https://www.target.com/p/flash-furniture-mid-back-ergonomic-office-chair/-/A-78593612",
+    "https://www.target.com/p/zinus-12-green-tea-memory-foam-mattress/-/A-52309614",
+    # Electric bikes & scooters
+    "https://www.target.com/p/razor-e300-electric-scooter/-/A-51527468",
+    "https://www.target.com/p/segway-ninebot-kickscooter-e2-plus/-/A-87221743",
+    # More electronics
+    "https://www.target.com/p/samsung-55-class-4k-smart-tv/-/A-83832662",
+    "https://www.target.com/p/dji-mini-3-drone/-/A-88237714",
+    "https://www.target.com/p/gopro-hero12-black/-/A-89128004",
+    "https://www.target.com/p/samsung-galaxy-tab-a8/-/A-86076503",
+    # More gaming
+    "https://www.target.com/p/xbox-series-s-512gb-console/-/A-80931811",
+    "https://www.target.com/p/meta-quest-3-mixed-reality-headset-128gb/-/A-89254004",
+    "https://www.target.com/p/xbox-wireless-controller/-/A-80931804",
 ]
 
 # ── Footsites ─────────────────────────────────────────────────────────────────
