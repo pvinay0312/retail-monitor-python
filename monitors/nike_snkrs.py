@@ -66,6 +66,13 @@ class NikeSnkrsMonitor(BaseMonitor):
     name = "Nike SNKRS"
     interval = NIKE_INTERVAL
 
+    def __init__(self):
+        super().__init__()
+        if NIKE_SNKRS_WEBHOOK_URL:
+            log.info("[Nike SNKRS] Webhook URL: CONFIGURED (%d chars)", len(NIKE_SNKRS_WEBHOOK_URL))
+        else:
+            log.error("[Nike SNKRS] *** NIKE_SNKRS_WEBHOOK_URL IS NOT SET — NO NOTIFICATIONS WILL FIRE ***")
+
     async def check(self) -> None:
         seen          = await load(_SEEN)
         status        = await load(_STATUS)
