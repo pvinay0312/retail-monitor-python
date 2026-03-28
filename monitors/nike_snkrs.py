@@ -50,11 +50,12 @@ FEED_URL_THREADS = (
     f"&filter=channelId({SNKRS_CHANNEL_ID})&count=50"
 )
 
-_SEEN        = "nike_seen.json"
-_STATUS      = "nike_status.json"
-_NOTIFY      = "nike_notify.json"
-_DROPS       = "nike_drops.json"       # upcoming drops with timestamps for 24h reminders
-_AUTO_STYLES = "nike_auto_styles.json" # auto-discovered style codes
+_SEEN           = "nike_seen.json"
+_STATUS         = "nike_status.json"
+_NOTIFY         = "nike_notify.json"
+_DROPS          = "nike_drops.json"          # upcoming drops for 24h reminders
+_UPCOMING_SEEN  = "nike_upcoming_seen.json"  # dedup for upcoming alerts (separate from drops)
+_AUTO_STYLES    = "nike_auto_styles.json"    # auto-discovered style codes
 
 
 class NikeSnkrsMonitor(BaseMonitor):
@@ -62,31 +63,32 @@ class NikeSnkrsMonitor(BaseMonitor):
     interval = NIKE_INTERVAL
 
     async def check(self) -> None:
-        seen        = await load(_SEEN)
-        status      = await load(_STATUS)
-        notify      = await load(_NOTIFY)
-        drops       = await load(_DROPS)
-        auto_styles = await load(_AUTO_STYLES)
+        seen          = await load(_SEEN)
+        status        = await load(_STATUS)
+        notify        = await load(_NOTIFY)
+        drops         = await load(_DROPS)
+        upcoming_seen = await load(_UPCOMING_SEEN)
+        auto_styles   = await load(_AUTO_STYLES)
 
         session = make_session("chrome110")
         try:
             objects = await self._fetch_feed(session)
             if objects:
-                await self._process_feed(objects, seen, status, notify, drops, auto_styles)
+                await self._process_feed(objects, seen, status, notify, drops, upcoming_seen, auto_styles)
 
             all_styles = list(set(NIKE_STYLE_CODES + list(auto_styles.keys())))
-            await self._check_watchlist(session, status, notify, drops, auto_styles, all_styles)
+            await self._check_watchlist(session, status, notify, drops, upcoming_seen, auto_styles, all_styles)
 
-            # Send 24h reminders for any drop happening within the next 24 hours
             await self._send_day_before_reminders(drops, notify)
         finally:
             await session.close()
 
-        await save(_SEEN,        seen)
-        await save(_STATUS,      status)
-        await save(_NOTIFY,      notify)
-        await save(_DROPS,       drops)
-        await save(_AUTO_STYLES, auto_styles)
+        await save(_SEEN,          seen)
+        await save(_STATUS,        status)
+        await save(_NOTIFY,        notify)
+        await save(_DROPS,         drops)
+        await save(_UPCOMING_SEEN, upcoming_seen)
+        await save(_AUTO_STYLES,   auto_styles)
 
     # ── Feed polling ──────────────────────────────────────────────────────────
 
@@ -106,7 +108,7 @@ class NikeSnkrsMonitor(BaseMonitor):
                 log.debug("[Nike] Feed error (%s): %s", feed_url, exc)
         return []
 
-    async def _process_feed(self, objects, seen, status, notify, drops, auto_styles) -> None:
+    async def _process_feed(self, objects, seen, status, notify, drops, upcoming_seen, auto_styles) -> None:
         for obj in objects:
             publish = obj.get("publishedContent", {})
             props   = publish.get("properties", {})
@@ -154,10 +156,11 @@ class NikeSnkrsMonitor(BaseMonitor):
                     )
                     notify[key] = time.time()
 
-                elif launch_status in UPCOMING_STATUSES and key not in seen:
+                elif _is_upcoming(launch_status, pi, props) and key not in upcoming_seen:
                     drop_date_str = _extract_drop_date(pi, props)
                     drop_ts       = _extract_drop_timestamp(pi, props)
-                    log.info("[Nike SNKRS] UPCOMING: %s | %s | drop=%s", title, style, drop_date_str)
+                    log.info("[Nike SNKRS] UPCOMING (feed): %s | %s | status=%s | drop=%s",
+                             title, style, launch_status, drop_date_str or "TBA")
                     await send_nike_drop(
                         UPCOMING_DROPS_WEBHOOK_URL,
                         name=title, url=product_url,
@@ -166,8 +169,8 @@ class NikeSnkrsMonitor(BaseMonitor):
                         upcoming=True,
                         drop_date=drop_date_str,
                     )
+                    upcoming_seen[key] = True
                     seen[key] = True
-                    # Save for 24h reminder
                     drops[key] = {
                         "title": title, "url": product_url, "price": price_str,
                         "image": image, "style_code": style,
@@ -179,7 +182,7 @@ class NikeSnkrsMonitor(BaseMonitor):
 
     # ── Watchlist ─────────────────────────────────────────────────────────────
 
-    async def _check_watchlist(self, session, status, notify, drops, auto_styles, all_styles) -> None:
+    async def _check_watchlist(self, session, status, notify, drops, upcoming_seen, auto_styles, all_styles) -> None:
         ua = random_ua()
         headers = base_headers(ua, referer="https://www.nike.com/")
         headers["Accept"] = "application/json"
@@ -222,6 +225,10 @@ class NikeSnkrsMonitor(BaseMonitor):
                     prev    = status.get(style_code, "")
                     on_cool = (time.time() - notify.get(style_code, 0)) < NOTIFY_COOLDOWN
 
+                    # Always log so Railway logs show what status each code has
+                    log.info("[Nike SNKRS] Watchlist %s | %s | status=%s",
+                             style_code, title[:50], launch_status or "UNKNOWN")
+
                     if launch_status in AVAILABLE_STATUSES and not on_cool and prev not in AVAILABLE_STATUSES:
                         log.info("[Nike SNKRS] WATCHLIST LIVE: %s | %s", style_code, title)
                         await send_nike_drop(
@@ -232,11 +239,14 @@ class NikeSnkrsMonitor(BaseMonitor):
                             upcoming=False,
                         )
                         notify[style_code] = time.time()
+                        # Remove from upcoming_seen so it can be re-detected if it goes upcoming again
+                        upcoming_seen.pop(style_code, None)
 
-                    elif launch_status in UPCOMING_STATUSES and style_code not in drops:
+                    elif _is_upcoming(launch_status, pi, {}) and style_code not in upcoming_seen:
                         drop_date_str = _extract_drop_date(pi, props)
                         drop_ts       = _extract_drop_timestamp(pi, props)
-                        log.info("[Nike SNKRS] WATCHLIST UPCOMING: %s | %s | drop=%s", style_code, title, drop_date_str)
+                        log.info("[Nike SNKRS] WATCHLIST UPCOMING: %s | %s | status=%s | drop=%s",
+                                 style_code, title[:50], launch_status, drop_date_str or "TBA")
                         await send_nike_drop(
                             UPCOMING_DROPS_WEBHOOK_URL,
                             name=title, url=product_url,
@@ -245,6 +255,7 @@ class NikeSnkrsMonitor(BaseMonitor):
                             upcoming=True,
                             drop_date=drop_date_str,
                         )
+                        upcoming_seen[style_code] = True
                         drops[style_code] = {
                             "title": title, "url": product_url, "price": price_str,
                             "image": image, "style_code": style_code,
@@ -312,6 +323,26 @@ def _extract_image(pi: dict) -> str:
         return imgs.get("portraitURL", "") or imgs.get("squarishURL", "")
     except Exception:
         return ""
+
+
+def _is_upcoming(launch_status: str, pi: dict, props: dict) -> bool:
+    """
+    Returns True if the product is upcoming but not yet live.
+    Permissive: catches any status that is NOT available/live,
+    as long as a future drop date exists OR the status is a known upcoming string.
+    """
+    if launch_status in AVAILABLE_STATUSES:
+        return False
+    if launch_status in UPCOMING_STATUSES:
+        return True
+    # If status is unknown but a future drop date exists, treat as upcoming
+    drop_ts = _extract_drop_timestamp(pi, props)
+    if drop_ts and drop_ts > time.time():
+        return True
+    # If the product exists in the API but has no clear live status, treat as upcoming
+    if launch_status and launch_status not in AVAILABLE_STATUSES:
+        return True
+    return False
 
 
 def _extract_drop_date(pi: dict, props: dict) -> str:
