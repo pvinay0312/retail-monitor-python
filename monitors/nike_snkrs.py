@@ -123,8 +123,8 @@ class NikeSnkrsMonitor(BaseMonitor):
             title       = props.get("title") or props.get("subtitle") or "Unknown Drop"
             launch_view = props.get("launchView", {})
 
-            product_infos = obj.get("productInfo", [])
-            if not product_infos and "channel_id" in obj:
+            product_infos = obj.get("productInfo") or []
+            if not product_infos:
                 product_infos = [obj]
 
             for pi in product_infos:
