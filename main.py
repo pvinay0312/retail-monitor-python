@@ -26,18 +26,28 @@ from monitors.footsites      import FootsitesMonitor
 # ── Logging ───────────────────────────────────────────────────────────────────
 
 def _setup_logging() -> None:
-    handler = colorlog.StreamHandler()
-    handler.setFormatter(colorlog.ColoredFormatter(
-        "%(log_color)s%(asctime)s [%(levelname)s] %(message)s%(reset)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-        log_colors={
-            "DEBUG":    "cyan",
-            "INFO":     "green",
-            "WARNING":  "yellow",
-            "ERROR":    "red",
-            "CRITICAL": "bold_red",
-        },
-    ))
+    handler = logging.StreamHandler()
+    # Disable ANSI colors on Railway — the log ingester misreads escape codes
+    # and incorrectly tags all messages as severity="error".
+    on_railway = bool(os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_SERVICE_ID"))
+    if on_railway:
+        handler.setFormatter(logging.Formatter(
+            "%(asctime)s [%(levelname)s] %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+        ))
+    else:
+        handler = colorlog.StreamHandler()
+        handler.setFormatter(colorlog.ColoredFormatter(
+            "%(log_color)s%(asctime)s [%(levelname)s] %(message)s%(reset)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+            log_colors={
+                "DEBUG":    "cyan",
+                "INFO":     "green",
+                "WARNING":  "yellow",
+                "ERROR":    "red",
+                "CRITICAL": "bold_red",
+            },
+        ))
     root = logging.getLogger()
     root.setLevel(logging.INFO)
     root.handlers.clear()
