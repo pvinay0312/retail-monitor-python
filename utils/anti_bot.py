@@ -4,6 +4,7 @@ Anti-bot utilities: user-agent rotation and realistic browser headers.
 Uses curl_cffi to get Chrome's real TLS fingerprint — significantly harder
 to detect than requests/httpx because the TLS handshake matches Chrome byte-for-byte.
 """
+from __future__ import annotations
 import random
 from curl_cffi.requests import AsyncSession
 

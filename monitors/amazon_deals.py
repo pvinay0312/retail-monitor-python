@@ -8,6 +8,7 @@ since the deals page is a React SPA.
 Scoring: only deals scoring >= MIN_SCORE_TO_ALERT are posted to Discord.
 Hot deals (score 80+) get an @here ping.
 """
+from __future__ import annotations
 import asyncio
 import logging
 import re

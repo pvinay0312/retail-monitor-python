@@ -4,6 +4,7 @@ Falls back to JSON-LD / __NEXT_DATA__ HTML scraping if the API fails.
 
 Alerts on ≥10% price drops and restocks.
 """
+from __future__ import annotations
 import asyncio
 import json
 import logging

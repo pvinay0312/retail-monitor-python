@@ -12,6 +12,7 @@ Strategy:
   • 2-hour cooldown per ASIN to avoid repeat alerts on long-running deals
   • Deduplicates ASINs across all outlet sub-pages in the same cycle
 """
+from __future__ import annotations
 import asyncio
 import logging
 import re

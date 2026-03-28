@@ -12,6 +12,7 @@ Strategy:
   • Posts to Discord only if score >= MIN_SCORE_TO_ALERT
   • Deduplicates by ASIN+coupon_value to avoid repeat alerts
 """
+from __future__ import annotations
 import asyncio
 import logging
 import re

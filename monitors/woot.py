@@ -15,6 +15,7 @@ Strategy:
   • Detects Woot-Off mode and adds ⚡ warning to alerts
   • Deduplicates by product URL with 1-hour cooldown
 """
+from __future__ import annotations
 import asyncio
 import json
 import logging

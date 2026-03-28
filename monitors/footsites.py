@@ -10,6 +10,7 @@ impersonation is sufficient to access it.
 API endpoint:  https://www.{domain}/api/products/pdp/{SKU}
 SKU extracted from product URL:  .../product/{name}/{SKU}.html
 """
+from __future__ import annotations
 import asyncio
 import logging
 import random

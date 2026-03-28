@@ -4,6 +4,7 @@ their own React frontend calls). Alerts on ≥10% price drops and restocks.
 
 Anti-bot: curl_cffi Chrome impersonation + 30-min backoff on 429.
 """
+from __future__ import annotations
 import asyncio
 import logging
 import random

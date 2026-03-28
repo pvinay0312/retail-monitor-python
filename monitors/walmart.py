@@ -6,6 +6,7 @@ Anti-bot: curl_cffi Chrome impersonation; 1-hour backoff on 429/503/412/521.
 The terra-firma JSON endpoint has lighter bot-protection than the full page
 load, making it the preferred approach from datacenter IPs (Railway).
 """
+from __future__ import annotations
 import asyncio
 import json
 import logging

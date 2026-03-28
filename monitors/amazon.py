@@ -7,6 +7,7 @@ Anti-bot strategy:
   • 2-hour backoff on CAPTCHA detection to prevent IP banning
   • Realistic sec-ch-ua and Sec-Fetch-* headers
 """
+from __future__ import annotations
 import asyncio
 import logging
 import re
