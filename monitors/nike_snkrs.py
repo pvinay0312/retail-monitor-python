@@ -33,19 +33,23 @@ log = logging.getLogger(__name__)
 
 NOTIFY_COOLDOWN = 30 * 60   # 30 min per product
 
-AVAILABLE_STATUSES  = {"STOCKED", "DAN", "HOLD", "CLOSEOUT", "ACTIVE", "IN_STOCK"}
+# ACTIVE is intentionally excluded here: Nike uses ACTIVE for both upcoming entry
+# windows (draw open, future drop date) and same-day live drops.
+# Date-based logic in _is_upcoming() and _is_live() handles this correctly.
+AVAILABLE_STATUSES  = {"STOCKED", "DAN", "CLOSEOUT", "IN_STOCK"}
 UPCOMING_STATUSES   = {
     "PRODUCT_HOLD", "SCHEDULED", "COMING_SOON", "INACTIVE",
     "EXCLUSIVE_ACCESS", "HOLD", "PUBLISH", "DRAFT",
 }
 
-FEED_URL_ROLLUP = (
-    "https://api.nike.com/product_feed/rollup_threads/v2"
+# threads/v2 is the primary endpoint — rollup_threads/v2 often returns 0 objects
+FEED_URL_THREADS = (
+    "https://api.nike.com/product_feed/threads/v2"
     f"?filter=marketplace(US)&filter=language(en)"
     f"&filter=channelId({SNKRS_CHANNEL_ID})&count=50"
 )
-FEED_URL_THREADS = (
-    "https://api.nike.com/product_feed/threads/v2"
+FEED_URL_ROLLUP = (
+    "https://api.nike.com/product_feed/rollup_threads/v2"
     f"?filter=marketplace(US)&filter=language(en)"
     f"&filter=channelId({SNKRS_CHANNEL_ID})&count=50"
 )
@@ -97,7 +101,7 @@ class NikeSnkrsMonitor(BaseMonitor):
         headers = base_headers(ua, referer="https://www.nike.com/")
         headers["Accept"] = "application/json"
 
-        for feed_url in (FEED_URL_ROLLUP, FEED_URL_THREADS):
+        for feed_url in (FEED_URL_THREADS, FEED_URL_ROLLUP):
             try:
                 resp = await session.get(feed_url, headers=headers, timeout=15)
                 if resp.status_code == 200:
@@ -142,10 +146,11 @@ class NikeSnkrsMonitor(BaseMonitor):
                     auto_styles[style] = {"title": title, "discovered": _iso_now()}
                     log.info("[Nike SNKRS] Auto-discovered style code: %s — %s", style, title)
 
-                prev   = status.get(key, "")
+                prev    = status.get(key, "")
                 on_cool = (time.time() - notify.get(key, 0)) < NOTIFY_COOLDOWN
+                is_live = _is_live(launch_status, pi, props)
 
-                if launch_status in AVAILABLE_STATUSES and not on_cool and prev not in AVAILABLE_STATUSES:
+                if is_live and not on_cool and not _is_live(prev, {}, {}):
                     log.info("[Nike SNKRS] LIVE DROP: %s | %s | %s", title, style, price_str)
                     await send_nike_drop(
                         NIKE_SNKRS_WEBHOOK_URL,
@@ -229,7 +234,8 @@ class NikeSnkrsMonitor(BaseMonitor):
                     log.info("[Nike SNKRS] Watchlist %s | %s | status=%s",
                              style_code, title[:50], launch_status or "UNKNOWN")
 
-                    if launch_status in AVAILABLE_STATUSES and not on_cool and prev not in AVAILABLE_STATUSES:
+                    is_live = _is_live(launch_status, pi, props)
+                    if is_live and not on_cool and not _is_live(prev, {}, {}):
                         log.info("[Nike SNKRS] WATCHLIST LIVE: %s | %s", style_code, title)
                         await send_nike_drop(
                             NIKE_SNKRS_WEBHOOK_URL,
@@ -325,13 +331,32 @@ def _extract_image(pi: dict) -> str:
         return ""
 
 
+def _is_live(launch_status: str, pi: dict, props: dict) -> bool:
+    """
+    Returns True if the product is currently available to purchase/enter right now.
+    ACTIVE with a future drop date = upcoming draw (NOT live).
+    ACTIVE with no/past date = live or same-day drop (treat as live).
+    """
+    if launch_status in AVAILABLE_STATUSES:
+        return True
+    if launch_status == "ACTIVE":
+        drop_ts = _extract_drop_timestamp(pi, props)
+        # If drop date is in the future, this is an upcoming entry window — not live yet
+        if drop_ts and drop_ts > time.time():
+            return False
+        return True  # no date or past date → treat as live
+    return False
+
+
 def _is_upcoming(launch_status: str, pi: dict, props: dict) -> bool:
     """
     Returns True if the product is upcoming but not yet live.
-    Permissive: catches any status that is NOT available/live,
-    as long as a future drop date exists OR the status is a known upcoming string.
+    ACTIVE + future drop date = upcoming draw (entry window open).
     """
-    if launch_status in AVAILABLE_STATUSES:
+    if _is_live(launch_status, pi, props):
+        return False
+    if launch_status == "ACTIVE":
+        # ACTIVE + future date handled above in _is_live; reaching here means it's live
         return False
     if launch_status in UPCOMING_STATUSES:
         return True
