@@ -171,11 +171,24 @@ class TargetMonitor(BaseMonitor):
             if resp.status_code in (429, 503):
                 self._blocked_until = time.time() + BOT_BACKOFF
                 return None
+            if resp.status_code == 404:
+                tcin = _tcin(url)
+                log.debug("[Target] 404 for TCIN %s — product no longer exists", tcin)
+                return None
             if resp.status_code != 200:
                 return None
             soup = BeautifulSoup(resp.text, "lxml")
             return _parse_target_html(soup)
         except Exception as exc:
+            exc_str = str(exc)
+            # Target injects JS into some pages that raises "Assignment to constant
+            # variable" at runtime when parsed by BeautifulSoup / lxml.  This is a
+            # known non-actionable error for certain TCINs — log at debug level and
+            # skip rather than counting as a scrape error.
+            if "Assignment to constant variable" in exc_str or "assignment to constant" in exc_str.lower():
+                tcin = _tcin(url)
+                log.debug("[Target] JS constant-assignment error for TCIN %s — skipping", tcin)
+                return None
             log.debug("[Target] HTML scrape error: %s", exc)
             return None
 

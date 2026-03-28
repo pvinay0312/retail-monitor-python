@@ -54,37 +54,17 @@ class FootsitesMonitor(BaseMonitor):
     interval = FOOTSITES_INTERVAL
 
     async def check(self) -> None:
-        stock  = await load(_STOCK)
-        notify = await load(_NOTIFY)
-
-        async with async_playwright() as pw:
-            browser = await _launch_browser(pw)
-            context = await _new_context(browser)
-            try:
-                page = await context.new_page()
-                await _apply_stealth(page)
-
-                for url in FOOTSITES_PRODUCTS:
-                    try:
-                        await self._check_product(url, page, stock, notify)
-                    except Exception:
-                        log.exception("[Footsites] Error on %s", url)
-                        # Restart the page to clear any bad state
-                        try:
-                            await page.close()
-                        except Exception:
-                            pass
-                        page = await context.new_page()
-                        await _apply_stealth(page)
-                    await asyncio.sleep(2)
-
-                await page.close()
-            finally:
-                await context.close()
-                await browser.close()
-
-        await save(_STOCK,  stock)
-        await save(_NOTIFY, notify)
+        # ── DISABLED: Kasada bot protection causes 100% Playwright timeouts ───
+        # Foot Locker and Champs Sports both use Kasada, which detects headless
+        # Chromium even with playwright-stealth applied. Every page.goto() and
+        # page.content() call times out at 30–45 s with zero successful parses.
+        # Re-enable once a bypass is available (e.g. residential proxies with
+        # real browser fingerprints, or a dedicated Kasada solver service).
+        log.warning(
+            "[Footsites] Monitor disabled — Kasada bot protection blocks all "
+            "Playwright requests (100%% timeout rate). Skipping this cycle."
+        )
+        return
 
     async def _check_product(self, url: str, page: Page, stock: dict, notify: dict) -> None:
         sku = _sku(url)

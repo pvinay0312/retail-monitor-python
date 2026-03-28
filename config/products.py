@@ -507,8 +507,6 @@ TARGET_PRODUCTS = [
     # ── LEGO Target Exclusives ────────────────────────────────────────────────
     "https://www.target.com/p/lego-icons-botanical-collection-wildflower-bouquet/-/A-86216138",
     "https://www.target.com/p/lego-star-wars-millennium-falcon-75375/-/A-89144452",
-    "https://www.target.com/p/lego-icons-bouquet-of-roses-10328/-/A-87811695",
-    "https://www.target.com/p/lego-technic-lamborghini-huracn-tecnica-42161/-/A-88516397",
 
     # ── Funko Pop Target Exclusives ───────────────────────────────────────────
     "https://www.target.com/p/funko-pop-obi-wan-kenobi-star-wars-exclusive/-/A-90522056",
@@ -517,14 +515,11 @@ TARGET_PRODUCTS = [
     # ── Gaming Consoles ───────────────────────────────────────────────────────
     "https://www.target.com/p/sony-playstation-5-pro-console/-/A-93620188",
     "https://www.target.com/p/nintendo-switch-2/-/A-94693225",
-    "https://www.target.com/p/nintendo-switch-with-neon-blue-neon-red-joy-con/-/A-77464002",
     "https://www.target.com/p/xbox-series-s-512gb-console/-/A-80931811",
     "https://www.target.com/p/meta-quest-3-mixed-reality-headset-128gb/-/A-89254004",
-    "https://www.target.com/p/meta-quest-2-advanced-all-in-one-virtual-reality-headset-128gb/-/A-80027191",
 
     # ── Gaming Controllers / Accessories ─────────────────────────────────────
     "https://www.target.com/p/sony-dualsense-wireless-controller-for-playstation-5/-/A-80790841",
-    "https://www.target.com/p/nintendo-switch-pro-controller/-/A-54187797",
     "https://www.target.com/p/super-mario-bros-wonder-nintendo-switch/-/A-89222720",
     "https://www.target.com/p/xbox-wireless-controller/-/A-80931804",
 
@@ -532,9 +527,6 @@ TARGET_PRODUCTS = [
     "https://www.target.com/p/apple-airpods-pro-2nd-generation-with-magsafe-case-usb-c/-/A-85978622",
     "https://www.target.com/p/beats-flex-all-day-wireless-earphones/-/A-80886022",
     "https://www.target.com/p/amazon-echo-dot-5th-gen-2022-release/-/A-85731672",
-    "https://www.target.com/p/ring-video-doorbell-wired/-/A-78555120",
-    "https://www.target.com/p/wyze-cam-v3-1080p-hd-indoor-outdoor-ip65-wired-smart-home-security-camera/-/A-79622440",
-    "https://www.target.com/p/jbl-charge-5-portable-bluetooth-speaker/-/A-84415661",
     "https://www.target.com/p/beats-studio-buds-true-wireless-noise-cancelling-earbuds/-/A-80885191",
     "https://www.target.com/p/samsung-55-class-4k-smart-tv/-/A-83832662",
     "https://www.target.com/p/dji-mini-3-drone/-/A-88237714",
@@ -542,24 +534,12 @@ TARGET_PRODUCTS = [
     "https://www.target.com/p/samsung-galaxy-tab-a8/-/A-86076503",
 
     # ── Kitchen ───────────────────────────────────────────────────────────────
-    "https://www.target.com/p/instant-pot-duo-7-in-1-electric-pressure-cooker-6qt/-/A-53118427",
-    "https://www.target.com/p/ninja-air-fryer-af101-4-quart/-/A-80037928",
-    "https://www.target.com/p/keurig-k-mini-single-serve-k-cup-pod-coffee-maker/-/A-76743671",
-    "https://www.target.com/p/nespresso-vertuo-pop-coffee-maker-and-espresso-machine/-/A-87625411",
 
     # ── Home ─────────────────────────────────────────────────────────────────
-    "https://www.target.com/p/roomba-600-series-robot-vacuum-670/-/A-80044598",
-    "https://www.target.com/p/shark-iq-robot-vacuum-rv1001ae/-/A-82684337",
-    "https://www.target.com/p/levoit-core-300-air-purifier/-/A-82592539",
 
     # ── Beauty ────────────────────────────────────────────────────────────────
-    "https://www.target.com/p/revlon-one-step-volumizer-original-1-0-hair-dryer-and-hot-air-brush/-/A-77911594",
-    "https://www.target.com/p/philips-sonicare-4100-power-toothbrush-rechargeable-electric/-/A-78564124",
-    "https://www.target.com/p/oral-b-io-series-4-rechargeable-electric-toothbrush/-/A-82616478",
 
     # ── Fitness ───────────────────────────────────────────────────────────────
-    "https://www.target.com/p/fit-simplify-resistance-loop-exercise-bands-set-of-5/-/A-84388065",
-    "https://www.target.com/p/liquid-i-v-hydration-multiplier-16-stick-packs/-/A-79939625",
 
     # ── Gardening ────────────────────────────────────────────────────────────
     "https://www.target.com/p/fiskars-bypass-pruning-shears/-/A-13467492",
@@ -578,8 +558,6 @@ TARGET_PRODUCTS = [
     "https://www.target.com/p/segway-ninebot-kickscooter-e2-plus/-/A-87221743",
 
     # ── Toys ─────────────────────────────────────────────────────────────────
-    "https://www.target.com/p/hot-wheels-20-pack-basic-car-set/-/A-78450793",
-    "https://www.target.com/p/barbie-dreamhouse/-/A-52293022",
 
 ]
 
