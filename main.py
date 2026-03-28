@@ -86,6 +86,28 @@ async def _main() -> None:
     log = logging.getLogger(__name__)
     log.info("=== Retail Monitor starting ===")
 
+    # Startup webhook audit — shows which channels are configured in Railway env vars
+    from config.settings import (
+        AMAZON_WEBHOOK_URL, BESTBUY_WEBHOOK_URL, WALMART_WEBHOOK_URL,
+        TARGET_WEBHOOK_URL, FOOTSITES_WEBHOOK_URL, NIKE_SNKRS_WEBHOOK_URL,
+        UPCOMING_DROPS_WEBHOOK_URL, WOOT_WEBHOOK_URL,
+    )
+    webhooks = {
+        "AMAZON":         AMAZON_WEBHOOK_URL,
+        "BESTBUY":        BESTBUY_WEBHOOK_URL,
+        "WALMART":        WALMART_WEBHOOK_URL,
+        "TARGET":         TARGET_WEBHOOK_URL,
+        "FOOTSITES":      FOOTSITES_WEBHOOK_URL,
+        "NIKE_SNKRS":     NIKE_SNKRS_WEBHOOK_URL,
+        "UPCOMING_DROPS": UPCOMING_DROPS_WEBHOOK_URL,
+        "WOOT":           WOOT_WEBHOOK_URL,
+    }
+    for name, url in webhooks.items():
+        if url:
+            log.info("  Webhook %-16s CONFIGURED", name)
+        else:
+            log.error("  Webhook %-16s NOT SET — alerts for this channel will be silenced!", name)
+
     monitors = [
         AmazonMonitor(),
         AmazonCouponsMonitor(),   # auto-scans amazon.com/coupons hub
