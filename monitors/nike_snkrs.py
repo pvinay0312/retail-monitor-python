@@ -17,10 +17,8 @@ API endpoints:
   Primary:  rollup_threads/v2  (works on Railway)
   Fallback: threads/v2
 """
-import asyncio
 import datetime
 import logging
-import random
 import time
 
 from config.products import NIKE_STYLE_CODES, SNKRS_CHANNEL_ID
@@ -44,15 +42,16 @@ UPCOMING_STATUSES   = {
 }
 
 # threads/v2 is the primary endpoint — rollup_threads/v2 often returns 0 objects
+# count=100 to maximize coverage for client-side watchlist filtering
 FEED_URL_THREADS = (
     "https://api.nike.com/product_feed/threads/v2"
     f"?filter=marketplace(US)&filter=language(en)"
-    f"&filter=channelId({SNKRS_CHANNEL_ID})&count=50"
+    f"&filter=channelId({SNKRS_CHANNEL_ID})&count=100"
 )
 FEED_URL_ROLLUP = (
     "https://api.nike.com/product_feed/rollup_threads/v2"
     f"?filter=marketplace(US)&filter=language(en)"
-    f"&filter=channelId({SNKRS_CHANNEL_ID})&count=50"
+    f"&filter=channelId({SNKRS_CHANNEL_ID})&count=100"
 )
 
 _SEEN           = "nike_seen.json"
@@ -81,8 +80,10 @@ class NikeSnkrsMonitor(BaseMonitor):
             if objects:
                 await self._process_feed(objects, seen, status, notify, drops, upcoming_seen, auto_styles)
 
+            # Watchlist: filter the already-fetched feed objects client-side instead of
+            # making individual API calls (Nike's filter=styleColor() is now INVALID_FILTER_FIELD)
             all_styles = list(set(NIKE_STYLE_CODES + list(auto_styles.keys())))
-            await self._check_watchlist(session, status, notify, drops, upcoming_seen, auto_styles, all_styles)
+            await self._check_watchlist(objects, status, notify, drops, upcoming_seen, auto_styles, all_styles)
 
             await self._send_day_before_reminders(drops, notify)
         finally:
@@ -188,94 +189,93 @@ class NikeSnkrsMonitor(BaseMonitor):
 
     # ── Watchlist ─────────────────────────────────────────────────────────────
 
-    async def _check_watchlist(self, session, status, notify, drops, upcoming_seen, auto_styles, all_styles) -> None:
-        ua = random_ua()
-        headers = base_headers(ua, referer="https://www.nike.com/")
-        headers["Accept"] = "application/json"
+    async def _check_watchlist(self, objects: list, status, notify, drops, upcoming_seen, _auto_styles, all_styles) -> None:
+        """
+        Client-side watchlist: filter already-fetched feed objects by style code.
+
+        Nike's API dropped support for filter=styleColor(...) — it now returns
+        INVALID_FILTER_FIELD. We fetch count=100 from the feed and match style codes
+        client-side instead of making one broken API call per style code.
+        """
+        # Build a map: style_code → list of (obj, pi) pairs from the feed
+        feed_by_style: dict[str, list[tuple]] = {}
+        for obj in objects:
+            publish = obj.get("publishedContent", {})
+            props   = publish.get("properties", {})
+            product_infos = obj.get("productInfo", []) or [obj]
+            for pi in product_infos:
+                style = pi.get("merchProduct", {}).get("styleColor", "").replace("/", "-").upper()
+                if style:
+                    feed_by_style.setdefault(style, []).append((obj, pi, props))
+
+        log.debug("[Nike SNKRS] Feed style codes: %s", list(feed_by_style.keys()))
 
         for style_code in all_styles:
-            await asyncio.sleep(random.uniform(0.8, 2.0))
-            api_url = (
-                f"https://api.nike.com/product_feed/threads/v2"
-                f"?filter=marketplace(US)&filter=language(en)"
-                f"&filter=channelId({SNKRS_CHANNEL_ID})"
-                f"&filter=styleColor({style_code})&count=1"
-            )
-            try:
-                resp = await session.get(api_url, headers=headers, timeout=12)
-                if resp.status_code != 200:
-                    continue
-                objects = resp.json().get("objects", [])
-                if not objects:
-                    log.warning("[Nike SNKRS] Watchlist %s → 0 objects from API (sold out or bad style code)", style_code)
-                    continue
+            style_upper = style_code.upper()
+            matches = feed_by_style.get(style_upper, [])
 
-                obj = objects[0]
-                props = obj.get("publishedContent", {}).get("properties", {})
-                product_infos = obj.get("productInfo", []) or [obj]
-                for pi in product_infos:
-                    launch_status = (
-                        pi.get("launchView", {}).get("status")
-                        or pi.get("merchProduct", {}).get("status", "")
-                    ).upper()
-                    price    = pi.get("merchPrice", {}).get("currentRetail", 0)
-                    skus     = pi.get("skus") or pi.get("availableSkus") or []
-                    sizes    = _extract_sizes(skus)
-                    image    = _extract_image(pi)
-                    title    = (
-                        pi.get("productContent", {}).get("fullTitle")
-                        or props.get("title")
-                        or style_code
+            if not matches:
+                log.info("[Nike SNKRS] Watchlist %s → not in feed this cycle (may be sold out or upcoming)", style_code)
+                continue
+
+            for obj, pi, props in matches:
+                launch_status = (
+                    pi.get("launchView", {}).get("status")
+                    or pi.get("merchProduct", {}).get("status", "")
+                    or ""
+                ).upper()
+                price    = pi.get("merchPrice", {}).get("currentRetail", 0)
+                skus     = pi.get("skus") or pi.get("availableSkus") or []
+                sizes    = _extract_sizes(skus)
+                image    = _extract_image(pi)
+                title    = (
+                    pi.get("productContent", {}).get("fullTitle")
+                    or props.get("title")
+                    or style_code
+                )
+                price_str   = f"${price:.0f}" if price else "N/A"
+                product_url = f"https://www.nike.com/launch/t/{style_code.lower()}"
+
+                on_cool = (time.time() - notify.get(style_code, 0)) < NOTIFY_COOLDOWN
+
+                log.info("[Nike SNKRS] Watchlist %s | %s | status=%s | sizes=%d",
+                         style_code, title[:50], launch_status or "UNKNOWN", len(sizes))
+
+                is_live = _is_live(launch_status, pi, props)
+                if is_live and not on_cool:
+                    log.info("[Nike SNKRS] WATCHLIST LIVE: %s | %s", style_code, title)
+                    await send_nike_drop(
+                        NIKE_SNKRS_WEBHOOK_URL,
+                        name=title, url=product_url,
+                        price=price_str, sizes=sizes,
+                        style_code=style_code, image=image,
+                        upcoming=False,
                     )
-                    price_str   = f"${price:.0f}" if price else "N/A"
-                    product_url = f"https://www.nike.com/launch/t/{style_code.lower()}"
+                    notify[style_code] = time.time()
+                    upcoming_seen.pop(style_code, None)
 
-                    prev    = status.get(style_code, "")
-                    on_cool = (time.time() - notify.get(style_code, 0)) < NOTIFY_COOLDOWN
+                elif _is_upcoming(launch_status, pi, props) and style_code not in upcoming_seen:
+                    drop_date_str = _extract_drop_date(pi, props)
+                    drop_ts       = _extract_drop_timestamp(pi, props)
+                    log.info("[Nike SNKRS] WATCHLIST UPCOMING: %s | %s | status=%s | drop=%s",
+                             style_code, title[:50], launch_status, drop_date_str or "TBA")
+                    await send_nike_drop(
+                        UPCOMING_DROPS_WEBHOOK_URL,
+                        name=title, url=product_url,
+                        price=price_str, sizes=sizes,
+                        style_code=style_code, image=image,
+                        upcoming=True,
+                        drop_date=drop_date_str,
+                    )
+                    upcoming_seen[style_code] = True
+                    drops[style_code] = {
+                        "title": title, "url": product_url, "price": price_str,
+                        "image": image, "style_code": style_code,
+                        "drop_date_str": drop_date_str, "drop_ts": drop_ts,
+                        "reminded_24h": False,
+                    }
 
-                    # Always log so Railway logs show what status each code has
-                    log.info("[Nike SNKRS] Watchlist %s | %s | status=%s",
-                             style_code, title[:50], launch_status or "UNKNOWN")
-
-                    is_live = _is_live(launch_status, pi, props)
-                    if is_live and not on_cool:
-                        log.info("[Nike SNKRS] WATCHLIST LIVE: %s | %s", style_code, title)
-                        await send_nike_drop(
-                            NIKE_SNKRS_WEBHOOK_URL,
-                            name=title, url=product_url,
-                            price=price_str, sizes=sizes,
-                            style_code=style_code, image=image,
-                            upcoming=False,
-                        )
-                        notify[style_code] = time.time()
-                        # Remove from upcoming_seen so it can be re-detected if it goes upcoming again
-                        upcoming_seen.pop(style_code, None)
-
-                    elif _is_upcoming(launch_status, pi, {}) and style_code not in upcoming_seen:
-                        drop_date_str = _extract_drop_date(pi, props)
-                        drop_ts       = _extract_drop_timestamp(pi, props)
-                        log.info("[Nike SNKRS] WATCHLIST UPCOMING: %s | %s | status=%s | drop=%s",
-                                 style_code, title[:50], launch_status, drop_date_str or "TBA")
-                        await send_nike_drop(
-                            UPCOMING_DROPS_WEBHOOK_URL,
-                            name=title, url=product_url,
-                            price=price_str, sizes=sizes,
-                            style_code=style_code, image=image,
-                            upcoming=True,
-                            drop_date=drop_date_str,
-                        )
-                        upcoming_seen[style_code] = True
-                        drops[style_code] = {
-                            "title": title, "url": product_url, "price": price_str,
-                            "image": image, "style_code": style_code,
-                            "drop_date_str": drop_date_str, "drop_ts": drop_ts,
-                            "reminded_24h": False,
-                        }
-
-                    status[style_code] = launch_status
-
-            except Exception as exc:
-                log.debug("[Nike] Watchlist error %s: %s", style_code, exc)
+                status[style_code] = launch_status
 
     # ── Day-before reminders ───────────────────────────────────────────────────
 
