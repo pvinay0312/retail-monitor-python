@@ -1,7 +1,10 @@
 """
-Walmart monitor — scrapes product pages and extracts pricing from __NEXT_DATA__.
+Walmart monitor — uses Walmart's internal terra-firma XHR API for product data.
+Falls back to HTML __NEXT_DATA__ scraping if the API is unavailable.
 
 Anti-bot: curl_cffi Chrome impersonation; 1-hour backoff on 429/503/412/521.
+The terra-firma JSON endpoint has lighter bot-protection than the full page
+load, making it the preferred approach from datacenter IPs (Railway).
 """
 import asyncio
 import json
@@ -23,7 +26,7 @@ log = logging.getLogger(__name__)
 
 DEAL_THRESHOLD = 0.15   # 15% off
 DEAL_COOLDOWN  = 3600
-BOT_BACKOFF    = 1200   # 20 min per-URL backoff (was 1hr — too long, miss restocks)
+BOT_BACKOFF    = 3600   # 1 hr per-URL backoff — datacenter IPs stay blocked longer
 
 BLOCK_STATUSES = {412, 429, 503, 521}
 BLOCK_TITLES   = {"robot", "blocked", "access denied", "captcha", "unavailable"}
@@ -56,6 +59,17 @@ class WalmartMonitor(BaseMonitor):
         impersonate = random.choice(["chrome110", "chrome120"])
         session = make_session(impersonate)
         try:
+            # Session warmup — visit homepage first to pick up session/consent cookies
+            # Akamai tracks session behaviour; a homepage visit makes subsequent
+            # product requests look like natural SPA navigation.
+            try:
+                warmup_ua = random_ua()
+                warmup_h  = base_headers(warmup_ua, referer="https://www.google.com/")
+                await session.get("https://www.walmart.com/", headers=warmup_h, timeout=15)
+                await asyncio.sleep(random.uniform(2.0, 4.0))
+            except Exception:
+                pass  # warmup failure is non-fatal
+
             for url in WALMART_PRODUCTS:
                 item_id = _item_id(url)
                 if time.time() < self._url_blocked.get(item_id, 0):
@@ -71,37 +85,102 @@ class WalmartMonitor(BaseMonitor):
         await save(_STOCK,  stock)
         await save(_NOTIFY, notify)
 
-    async def _check_product(self, url, session, prices, stock, notify) -> None:
-        item_id = _item_id(url)
-        ua      = random_ua()
-        headers = base_headers(ua, referer="https://www.walmart.com/")
+    async def _try_terra_firma(self, item_id: str, product_url: str, session) -> dict | None:
+        """
+        Call Walmart's internal XHR API (terra-firma) for product data.
+        This is a JSON endpoint the frontend uses for SPA navigation — it tends
+        to have lighter Akamai protection than a cold HTML page load.
+
+        Returns: product dict on success, None to fall through to HTML scraping.
+        Sets self._url_blocked[item_id] and returns None when blocked (403/429).
+        """
+        api_url = (
+            f"https://www.walmart.com/terra-firma/fetch"
+            f"?rgs=DESKTOP_SINGLE_ITEM&itemId={item_id}"
+        )
+        ua = random_ua()
+        headers = base_headers(ua, referer=product_url)
+        headers.update({
+            "Accept":           "application/json, text/plain, */*",
+            "Sec-Fetch-Dest":   "empty",
+            "Sec-Fetch-Mode":   "cors",
+            "Sec-Fetch-Site":   "same-origin",
+        })
+        headers.pop("Upgrade-Insecure-Requests", None)
+        headers.pop("Sec-Fetch-User", None)
 
         try:
-            resp = await session.get(url, headers=headers, timeout=20, allow_redirects=True)
+            resp = await session.get(api_url, headers=headers, timeout=15)
         except Exception as exc:
-            log.debug("[Walmart] Request error %s: %s", item_id, exc)
-            self._url_blocked[item_id] = time.time() + (BOT_BACKOFF // 2)
-            return
+            log.debug("[Walmart] Terra-firma error %s: %s", item_id, exc)
+            return None
 
         if resp.status_code in BLOCK_STATUSES:
-            log.warning("[Walmart] Blocked (HTTP %d) %s — backoff %ds", resp.status_code, item_id, BOT_BACKOFF)
+            log.warning("[Walmart] Terra-firma blocked (%d) %s — backoff %ds",
+                        resp.status_code, item_id, BOT_BACKOFF)
             self._url_blocked[item_id] = time.time() + BOT_BACKOFF
-            return
+            return None
 
         if resp.status_code != 200:
+            log.debug("[Walmart] Terra-firma HTTP %d for %s", resp.status_code, item_id)
+            return None
+
+        ct = resp.headers.get("content-type", "")
+        if "json" not in ct:
+            log.debug("[Walmart] Terra-firma non-JSON response for %s (ct=%s)", item_id, ct)
+            return None
+
+        try:
+            data = resp.json()
+            product = _deep_find_product(data)
+            if product:
+                log.debug("[Walmart] Terra-firma success for %s", item_id)
+            return product
+        except Exception:
+            return None
+
+    async def _check_product(self, url, session, prices, stock, notify) -> None:
+        item_id = _item_id(url)
+
+        # ── Try terra-firma JSON API first (lighter bot protection) ────────────
+        prev_backoff = self._url_blocked.get(item_id, 0)
+        product = await self._try_terra_firma(item_id, url, session)
+
+        # terra-firma was blocked → backoff already set, HTML will also fail
+        if product is None and self._url_blocked.get(item_id, 0) > prev_backoff:
             return
 
-        soup = BeautifulSoup(resp.text, "lxml")
-        page_title = (soup.title.string or "").lower()
-        if any(t in page_title for t in BLOCK_TITLES):
-            log.warning("[Walmart] Bot block detected %s — backoff %ds", item_id, BOT_BACKOFF)
-            self._url_blocked[item_id] = time.time() + BOT_BACKOFF
-            return
+        # terra-firma succeeded or returned nothing (bad format) → try HTML
+        if product is None:
+            ua      = random_ua()
+            headers = base_headers(ua, referer="https://www.walmart.com/")
 
-        product = _extract_next_data(soup)
-        if not product:
-            log.debug("[Walmart] No __NEXT_DATA__ for %s", item_id)
-            return
+            try:
+                resp = await session.get(url, headers=headers, timeout=20, allow_redirects=True)
+            except Exception as exc:
+                log.debug("[Walmart] Request error %s: %s", item_id, exc)
+                self._url_blocked[item_id] = time.time() + (BOT_BACKOFF // 2)
+                return
+
+            if resp.status_code in BLOCK_STATUSES:
+                log.warning("[Walmart] Blocked (HTTP %d) %s — backoff %ds", resp.status_code, item_id, BOT_BACKOFF)
+                self._url_blocked[item_id] = time.time() + BOT_BACKOFF
+                return
+
+            if resp.status_code != 200:
+                return
+
+            soup = BeautifulSoup(resp.text, "lxml")
+            page_title = (soup.title.string or "").lower()
+            if any(t in page_title for t in BLOCK_TITLES):
+                log.warning("[Walmart] Bot block detected %s — backoff %ds", item_id, BOT_BACKOFF)
+                self._url_blocked[item_id] = time.time() + BOT_BACKOFF
+                return
+
+            product = _extract_next_data(soup)
+            if not product:
+                log.debug("[Walmart] No __NEXT_DATA__ for %s", item_id)
+                return
 
         name      = product.get("name", "Unknown Product")[:200]
         price     = product.get("price")

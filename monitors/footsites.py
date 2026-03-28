@@ -27,7 +27,7 @@ from utils.storage import load, save
 log = logging.getLogger(__name__)
 
 NOTIFY_COOLDOWN = 3600   # 1 hour per SKU
-BOT_BACKOFF     = 900    # 15 min per SKU on 403/429
+BOT_BACKOFF     = 3600   # 1 hr per SKU on 403/429 — datacenter IPs stay blocked longer
 _STOCK          = "fl_stock.json"
 _NOTIFY         = "fl_notify.json"
 
@@ -54,6 +54,17 @@ class FootsitesMonitor(BaseMonitor):
         notify = await load(_NOTIFY)
         session = make_session("chrome120")
         try:
+            # Session warmup — visit the homepage to pick up session + Kasada cookies.
+            # Without a warmup the very first API request comes from a "cold" session
+            # which is easier for Kasada to flag as bot traffic.
+            try:
+                warmup_ua = random_ua()
+                warmup_h  = base_headers(warmup_ua, referer="https://www.google.com/")
+                await session.get("https://www.footlocker.com/", headers=warmup_h, timeout=15)
+                await asyncio.sleep(random.uniform(2.0, 4.0))
+            except Exception:
+                pass  # warmup failure is non-fatal
+
             for url in FOOTSITES_PRODUCTS:
                 sku = _sku(url)
                 if not sku:
@@ -83,7 +94,7 @@ class FootsitesMonitor(BaseMonitor):
             return
 
         if resp.status_code in (403, 429):
-            log.warning("[Footsites] Bot-blocked on %s — backing off 15 min", sku)
+            log.warning("[Footsites] Bot-blocked (%d) on %s — backing off %ds", resp.status_code, sku, BOT_BACKOFF)
             self._sku_blocked[sku] = time.time() + BOT_BACKOFF
             return
         if resp.status_code == 404:
@@ -155,16 +166,22 @@ def _domain(url: str) -> str:
 
 def _api_headers(product_url: str, sku: str) -> dict:
     """Build headers that mimic a real XHR from the product page."""
-    ua = random_ua()
-    h  = base_headers(ua, referer=product_url)
+    from urllib.parse import urlparse
+    ua     = random_ua()
+    h      = base_headers(ua, referer=product_url)
+    parsed = urlparse(product_url)
+    origin = f"{parsed.scheme}://{parsed.netloc}"
     h.update({
         "Accept":             "application/json, text/plain, */*",
+        "Origin":             origin,
         "x-fl-request-id":    str(uuid.uuid4()),
         "Sec-Fetch-Dest":     "empty",
         "Sec-Fetch-Mode":     "cors",
         "Sec-Fetch-Site":     "same-origin",
         "X-Requested-With":   "XMLHttpRequest",
     })
+    h.pop("Upgrade-Insecure-Requests", None)
+    h.pop("Sec-Fetch-User", None)
     return h
 
 
