@@ -30,7 +30,7 @@ from utils.storage import load, save
 
 log = logging.getLogger(__name__)
 
-NOTIFY_COOLDOWN = 2 * 60    # 2 min — short enough to catch live drops after redeploy
+NOTIFY_COOLDOWN = 4 * 3600  # 4 hours — notify once per drop, not every cycle
 
 # ACTIVE is intentionally excluded here: Nike uses ACTIVE for both upcoming entry
 # windows (draw open, future drop date) and same-day live drops.
