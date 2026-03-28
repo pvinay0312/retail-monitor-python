@@ -66,10 +66,10 @@ AMAZON_PRODUCTS = [
     "https://www.amazon.com/Apple-MR8H3LL-A-Vision-Pro/dp/B0CXFZQ4FB",
 
     # ── RTX 5000 Series GPUs (hottest resale items — launched Jan 2025) ──────
-    "https://www.amazon.com/dp/B0F1234GPU1",  # ASUS ROG RTX 5090  # TODO: verify ASIN
-    "https://www.amazon.com/dp/B0F1234GPU2",  # MSI RTX 5090 Gaming X  # TODO: verify ASIN
-    "https://www.amazon.com/dp/B0F1234GPU3",  # ASUS ROG RTX 5080  # TODO: verify ASIN
-    "https://www.amazon.com/dp/B0F1234GPU4",  # Gigabyte RTX 5080 Gaming OC  # TODO: verify ASIN
+    "https://www.amazon.com/ASUS-Graphics-3-8-Slot-Axial-tech-Phase-Change/dp/B0DS2WQZ2M",  # ASUS ROG Astral RTX 5090 OC
+    "https://www.amazon.com/MSI-GeForce-5090-Gaming-Trio/dp/B0DT6Q3BXM",                  # MSI RTX 5090 Gaming Trio OC
+    "https://www.amazon.com/ASUS-Graphics-3-8-Slot-Axial-tech-Phase-Change/dp/B0DQSD7YQC", # ASUS ROG Astral RTX 5080 OC
+    "https://www.amazon.com/GIGABYTE-Graphics-WINDFORCE-GV-N5080GAMING-OC-16GD/dp/B0DS2R6948", # Gigabyte RTX 5080 Gaming OC
     # RTX 40-series (still highly liquid)
     "https://www.amazon.com/ASUS-GeForce-DisplayPort-Axial-tech-Technology/dp/B0CNBGFQWG",
     "https://www.amazon.com/MSI-RTX-4070-GAMING-16G/dp/B0CNQKSFXR",
@@ -79,7 +79,7 @@ AMAZON_PRODUCTS = [
     "https://www.amazon.com/PlayStation-5-Pro-Console/dp/B0CZG7H7XX",           # PS5 Pro
     "https://www.amazon.com/Nintendo-Switch-OLED-Model-Neon-Joy/dp/B098RL6SBJ",
     "https://www.amazon.com/Nintendo-Switch-OLED-Model-White-Joy/dp/B098BKLHBJ",
-    "https://www.amazon.com/dp/B0SWITCH2AA",                                     # Nintendo Switch 2  # TODO: verify ASIN
+    "https://www.amazon.com/dp/B0F3GWXLTS",                                     # Nintendo Switch 2
     "https://www.amazon.com/Xbox-Series-S-Robot-White/dp/B08G9J44ZN",
 
     # ── Gaming Controllers / Peripherals ─────────────────────────────────────
@@ -112,10 +112,6 @@ AMAZON_PRODUCTS = [
     "https://www.amazon.com/Nike-Jordan-Retro-Mens/dp/B0BXZLKKBB",
     "https://www.amazon.com/adidas-Originals-Ultraboost-Running-Shoes/dp/B0B5C1PKHV",
     "https://www.amazon.com/New-Balance-Fresh-Foam-Running/dp/B0B8WLFZ3D",
-    "https://www.amazon.com/dp/B0YEEZY500A",                                    # Adidas Yeezy (when they appear)  # TODO: verify ASIN
-
-    # ── Travis Scott / Streetwear Collabs ────────────────────────────────────
-    "https://www.amazon.com/dp/B0C5TRAVIS1",                                    # Travis Scott merch/collab  # TODO: verify ASIN
     "https://www.amazon.com/New-Era-Yankees-59FIFTY-Fitted/dp/B07J8MKRS3",
 
     # ── Tablets ──────────────────────────────────────────────────────────────
@@ -349,27 +345,25 @@ BESTBUY_PRODUCTS = [
     "https://www.bestbuy.com/site/microsoft-xbox-series-x-1tb-console/6428324.p",
     "https://www.bestbuy.com/site/nintendo-switch-oled-model-with-white-joy-con/6470924.p",
     "https://www.bestbuy.com/site/nintendo-switch-oled-model-w-neon-red-neon-blue-joy-con/6470925.p",
-    "https://www.bestbuy.com/site/nintendo-switch-2/XXXXXXXX.p",                         # TODO: verify SKU
+    "https://www.bestbuy.com/site/nintendo-switch-2/6614313.p",
     "https://www.bestbuy.com/site/meta-quest-3-128gb/6531587.p",
     "https://www.bestbuy.com/site/meta-quest-3s-128gb/6570888.p",
 
     # ── RTX 5090 / 5080 GPUs (most in-demand drops) ───────────────────────────
-    "https://www.bestbuy.com/site/nvidia-geforce-rtx-5090-founders-edition/XXXXXXXX.p",  # TODO: verify SKU
-    "https://www.bestbuy.com/site/nvidia-geforce-rtx-5080-founders-edition/XXXXXXXX.p",  # TODO: verify SKU
-    "https://www.bestbuy.com/site/asus-rog-strix-geforce-rtx-5090/XXXXXXXX.p",           # TODO: verify SKU
-    "https://www.bestbuy.com/site/msi-geforce-rtx-5080-gaming-x-trio/XXXXXXXX.p",        # TODO: verify SKU
+    "https://www.bestbuy.com/site/nvidia-geforce-rtx-5090-founders-edition/6614151.p",
+    "https://www.bestbuy.com/site/nvidia-geforce-rtx-5080-founders-edition/6614153.p",
+    "https://www.bestbuy.com/site/asus-rog-strix-geforce-rtx-5090/6614120.p",
+    "https://www.bestbuy.com/site/msi-geforce-rtx-5090-gaming-x-trio/6616090.p",
     # RTX 40-series (still active market)
     "https://www.bestbuy.com/site/nvidia-geforce-rtx-4080-super-16gb-gddr6x/6570550.p",
     "https://www.bestbuy.com/site/nvidia-geforce-rtx-4070-super-12gb-gddr6x/6570551.p",
     "https://www.bestbuy.com/site/asus-geforce-rtx-4070-ti-super-16gb/6570315.p",
 
     # ── Pokemon TCG (Best Buy carries these — sell out fast) ──────────────────
-    "https://www.bestbuy.com/site/pokemon-prismatic-evolutions-elite-trainer-box/XXXXXXXX.p",  # TODO: verify SKU
-    "https://www.bestbuy.com/site/pokemon-scarlet-violet-booster-bundle/XXXXXXXX.p",           # TODO: verify SKU
+    "https://www.bestbuy.com/site/pokemon-prismatic-evolutions-elite-trainer-box/6606082.p",
 
     # ── LEGO Exclusives ───────────────────────────────────────────────────────
-    "https://www.bestbuy.com/site/lego-icons-eiffel-tower-10307/XXXXXXXX.p",              # TODO: verify SKU
-    "https://www.bestbuy.com/site/lego-technic-bugatti-bolide-42151/XXXXXXXX.p",          # TODO: verify SKU
+    "https://www.bestbuy.com/site/lego-technic-bugatti-bolide-42151/6529527.p",
 
     # ── Apple ─────────────────────────────────────────────────────────────────
     "https://www.bestbuy.com/site/apple-airpods-pro-2nd-generation-with-magsafe-case-usb%E2%80%91c/6447382.p",
@@ -379,7 +373,7 @@ BESTBUY_PRODUCTS = [
     "https://www.bestbuy.com/site/apple-macbook-air-13-inch-laptop-apple-m3-chip-8gb-memory-256gb/6565837.p",
     "https://www.bestbuy.com/site/apple-macbook-pro-14-inch-laptop-apple-m4-pro/6578533.p",
     "https://www.bestbuy.com/site/apple-ipad-10th-generation-10-9-inch-64gb-wi-fi/6499637.p",
-    "https://www.bestbuy.com/site/apple-iphone-16-pro-max-512gb-natural-titanium/XXXXXXXX.p",  # TODO: verify SKU
+    "https://www.bestbuy.com/site/apple-iphone-16-pro-max-512gb-natural-titanium/6443380.p",
 
     # ── Headphones ────────────────────────────────────────────────────────────
     "https://www.bestbuy.com/site/sony-wh-1000xm5-wireless-noise-canceling-over-ear-headphones/6505727.p",
@@ -433,34 +427,28 @@ BESTBUY_PRODUCTS = [
 WALMART_PRODUCTS = [
 
     # ── Pokemon TCG Walmart Exclusives (sell out FASTEST at Walmart) ──────────
-    "https://www.walmart.com/ip/Pokemon-Prismatic-Evolutions-Elite-Trainer-Box/XXXXXXXXX",  # TODO: verify item ID
-    "https://www.walmart.com/ip/Pokemon-TCG-Scarlet-Violet-Booster-Bundle/XXXXXXXXX",       # TODO: verify item ID
-    "https://www.walmart.com/ip/Pokemon-TCG-151-Ultra-Premium-Collection/XXXXXXXXX",        # TODO: verify item ID
-    "https://www.walmart.com/ip/Pokemon-Paldean-Fates-Elite-Trainer-Box/XXXXXXXXX",         # TODO: verify item ID
+    "https://www.walmart.com/ip/Pokemon-Prismatic-Evolutions-Elite-Trainer-Box/13816151308",
+    "https://www.walmart.com/ip/Pokemon-TCG-151-Ultra-Premium-Collection/3606845180",
 
     # ── Funko Pop Exclusives ──────────────────────────────────────────────────
-    "https://www.walmart.com/ip/Funko-Pop-Exclusive-Dragon-Ball-Z/XXXXXXXXX",               # TODO: verify item ID
-    "https://www.walmart.com/ip/Funko-Pop-Marvel-Exclusive/XXXXXXXXX",                      # TODO: verify item ID
+    "https://www.walmart.com/ip/Funko-Pop-Dragon-Ball-Super-Zamasu/153254915",
 
     # ── Gaming Consoles ───────────────────────────────────────────────────────
     "https://www.walmart.com/ip/PlayStation-5-Console/363472942",
     "https://www.walmart.com/ip/PlayStation-5-Digital-Edition-Console/1736740710",
-    "https://www.walmart.com/ip/PlayStation-5-Pro-Console/XXXXXXXXX",                       # PS5 Pro  # TODO: verify item ID
+    "https://www.walmart.com/ip/PlayStation-5-Pro-Console/18235967161",
     "https://www.walmart.com/ip/Nintendo-Switch-OLED-Model-w-Neon-Red-Neon-Blue-Joy-Con/910582148",
     "https://www.walmart.com/ip/Nintendo-Switch-OLED-Model-w-White-Joy-Con/493454737",
-    "https://www.walmart.com/ip/Nintendo-Switch-2/XXXXXXXXX",                               # TODO: verify item ID
+    "https://www.walmart.com/ip/Nintendo-Switch-2/15949610846",
     "https://www.walmart.com/ip/Nintendo-Switch-Pro-Controller/319026465",
     "https://www.walmart.com/ip/Xbox-Series-X-Console/443574645",
     "https://www.walmart.com/ip/Xbox-Series-S-512GB-All-Digital-Console/408062341",
     "https://www.walmart.com/ip/DualSense-Wireless-Controller-PlayStation-5/680339246",
     "https://www.walmart.com/ip/Meta-Quest-2-128GB-Advanced-VR-Headset/521108397",
 
-    # ── RTX 5080 GPU ──────────────────────────────────────────────────────────
-    "https://www.walmart.com/ip/ASUS-ROG-Strix-GeForce-RTX-5080/XXXXXXXXX",                # TODO: verify item ID
-
     # ── LEGO ─────────────────────────────────────────────────────────────────
-    "https://www.walmart.com/ip/LEGO-Icons-Eiffel-Tower/XXXXXXXXX",                        # TODO: verify item ID
-    "https://www.walmart.com/ip/LEGO-Star-Wars-Millennium-Falcon/XXXXXXXXX",               # TODO: verify item ID
+    "https://www.walmart.com/ip/LEGO-Icons-Eiffel-Tower/3792956367",
+    "https://www.walmart.com/ip/LEGO-Star-Wars-Millennium-Falcon/3474788564",
     "https://www.walmart.com/ip/LEGO-City-Police-Station-60316/1388823900",
     "https://www.walmart.com/ip/LEGO-Creator-3-in-1-Exotic-Parrot-31136/4006938900",
 
@@ -474,9 +462,6 @@ WALMART_PRODUCTS = [
     "https://www.walmart.com/ip/Samsung-55-Class-4K-Crystal-UHD-Smart-TV/989571551",
     "https://www.walmart.com/ip/Samsung-Galaxy-Tab-A8-10-5-64GB/958255933",
     "https://www.walmart.com/ip/DJI-Mini-3-Drone/1515453614",
-
-    # ── Retro Gaming ──────────────────────────────────────────────────────────
-    "https://www.walmart.com/ip/Analogue-Pocket-Handheld/XXXXXXXXX",                       # TODO: verify item ID
 
     # ── Smart Home ────────────────────────────────────────────────────────────
     "https://www.walmart.com/ip/Amazon-Echo-Dot-5th-Gen-2022-release/1481586448",
@@ -515,27 +500,23 @@ WALMART_PRODUCTS = [
 TARGET_PRODUCTS = [
 
     # ── Pokemon TCG Target Exclusives — HIGHEST PRIORITY (<60 s sellout) ──────
-    "https://www.target.com/p/pokemon-prismatic-evolutions-elite-trainer-box/-/A-XXXXXXXX",         # TODO: verify TCIN
-    "https://www.target.com/p/pokemon-trading-card-game-scarlet-violet-booster-bundle/-/A-XXXXXXXX", # TODO: verify TCIN
-    "https://www.target.com/p/pokemon-trading-card-game-paldean-fates-elite-trainer-box/-/A-XXXXXXXX", # TODO: verify TCIN
-    "https://www.target.com/p/pokemon-151-ultra-premium-collection/-/A-XXXXXXXX",                   # TODO: verify TCIN
-    "https://www.target.com/p/pokemon-temporal-forces-booster-bundle/-/A-XXXXXXXX",                 # TODO: verify TCIN
+    "https://www.target.com/p/pokemon-prismatic-evolutions-elite-trainer-box/-/A-93954435",
+    "https://www.target.com/p/pokemon-trading-card-game-paldean-fates-elite-trainer-box/-/A-89432659",
+    "https://www.target.com/p/pokemon-temporal-forces-booster-bundle/-/A-89952655",
 
     # ── LEGO Target Exclusives ────────────────────────────────────────────────
-    "https://www.target.com/p/lego-icons-botanical-collection-wildflower-bouquet/-/A-XXXXXXXX",     # TODO: verify TCIN
-    "https://www.target.com/p/lego-star-wars-millennium-falcon-75375/-/A-XXXXXXXX",                 # TODO: verify TCIN
-    "https://www.target.com/p/lego-icons-eiffel-tower-10307/-/A-XXXXXXXX",                          # TODO: verify TCIN
+    "https://www.target.com/p/lego-icons-botanical-collection-wildflower-bouquet/-/A-86216138",
+    "https://www.target.com/p/lego-star-wars-millennium-falcon-75375/-/A-89144452",
     "https://www.target.com/p/lego-icons-bouquet-of-roses-10328/-/A-87811695",
     "https://www.target.com/p/lego-technic-lamborghini-huracn-tecnica-42161/-/A-88516397",
 
     # ── Funko Pop Target Exclusives ───────────────────────────────────────────
-    "https://www.target.com/p/funko-pop-star-wars-exclusive/-/A-XXXXXXXX",                          # TODO: verify TCIN
-    "https://www.target.com/p/funko-pop-marvel-exclusive/-/A-XXXXXXXX",                             # TODO: verify TCIN
-    "https://www.target.com/p/funko-pop-disney-exclusive/-/A-XXXXXXXX",                             # TODO: verify TCIN
+    "https://www.target.com/p/funko-pop-obi-wan-kenobi-star-wars-exclusive/-/A-90522056",
+    "https://www.target.com/p/funko-pop-daredevil-marvel-exclusive/-/A-90522051",
 
     # ── Gaming Consoles ───────────────────────────────────────────────────────
-    "https://www.target.com/p/sony-playstation-5-pro-console/-/A-XXXXXXXX",                         # PS5 Pro  # TODO: verify TCIN
-    "https://www.target.com/p/nintendo-switch-2/-/A-XXXXXXXX",                                      # TODO: verify TCIN
+    "https://www.target.com/p/sony-playstation-5-pro-console/-/A-93620188",
+    "https://www.target.com/p/nintendo-switch-2/-/A-94693225",
     "https://www.target.com/p/nintendo-switch-with-neon-blue-neon-red-joy-con/-/A-77464002",
     "https://www.target.com/p/xbox-series-s-512gb-console/-/A-80931811",
     "https://www.target.com/p/meta-quest-3-mixed-reality-headset-128gb/-/A-89254004",
@@ -546,9 +527,6 @@ TARGET_PRODUCTS = [
     "https://www.target.com/p/nintendo-switch-pro-controller/-/A-54187797",
     "https://www.target.com/p/super-mario-bros-wonder-nintendo-switch/-/A-89222720",
     "https://www.target.com/p/xbox-wireless-controller/-/A-80931804",
-
-    # ── Nike at Target (Target Circle exclusives) ─────────────────────────────
-    "https://www.target.com/p/nike-dunk-low-retro/-/A-XXXXXXXX",                                    # TODO: verify TCIN
 
     # ── Electronics ───────────────────────────────────────────────────────────
     "https://www.target.com/p/apple-airpods-pro-2nd-generation-with-magsafe-case-usb-c/-/A-85978622",
@@ -719,7 +697,7 @@ FOOTSITES_PRODUCTS = [
 # ── Nike SNKRS — style codes monitored for restocks / new availability ────────
 NIKE_STYLE_CODES = [
 
-    # ── Air Jordan 1 High OG ─────────────────────────────────────────────────
+    # ── Air Jordan 1 High OG ─────────���───────────────────────────────────────
     "DZ5485-701",  # Yellow Ochre
     "DZ5485-130",  # Green Glow
     "FQ2947-100",  # Bleached Denim
