@@ -60,7 +60,11 @@ def _setup_logging() -> None:
 # ── Health-check HTTP server (keeps Railway from terminating the dyno) ────────
 
 async def _health_server(port: int = 8080) -> None:
-    from aiohttp import web  # optional dep — skip if not installed
+    try:
+        from aiohttp import web
+    except ImportError:
+        logging.getLogger(__name__).warning("aiohttp not installed — health-check server disabled")
+        return
 
     async def _handler(request):
         return web.Response(text="OK")
