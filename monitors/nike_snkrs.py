@@ -7,11 +7,18 @@ Nike SNKRS monitor — two complementary strategies:
 2. Style-code watchlist: separately tracks specific style codes from
    config/products.py for restocks / availability changes.
 
+3. Day-before reminder: saves upcoming drop times and sends a @here alert
+   24 hours before each drop so members can prepare.
+
+4. Auto-discovery: new style codes found in the feed are saved automatically
+   to nike_auto_styles.json and monitored on future cycles.
+
 API endpoints:
   Primary:  rollup_threads/v2  (works on Railway)
   Fallback: threads/v2
 """
 import asyncio
+import datetime
 import logging
 import time
 
@@ -26,8 +33,11 @@ log = logging.getLogger(__name__)
 
 NOTIFY_COOLDOWN = 30 * 60   # 30 min per product
 
-AVAILABLE_STATUSES  = {"STOCKED", "DAN", "HOLD", "CLOSEOUT"}
-UPCOMING_STATUSES   = {"PRODUCT_HOLD", "SCHEDULED", "COMING_SOON", "INACTIVE"}
+AVAILABLE_STATUSES  = {"STOCKED", "DAN", "HOLD", "CLOSEOUT", "ACTIVE", "IN_STOCK"}
+UPCOMING_STATUSES   = {
+    "PRODUCT_HOLD", "SCHEDULED", "COMING_SOON", "INACTIVE",
+    "EXCLUSIVE_ACCESS", "HOLD", "PUBLISH", "DRAFT",
+}
 
 FEED_URL_ROLLUP = (
     "https://api.nike.com/product_feed/rollup_threads/v2"
@@ -40,9 +50,11 @@ FEED_URL_THREADS = (
     f"&filter=channelId({SNKRS_CHANNEL_ID})&count=50"
 )
 
-_SEEN   = "nike_seen.json"
-_STATUS = "nike_status.json"
-_NOTIFY = "nike_notify.json"
+_SEEN        = "nike_seen.json"
+_STATUS      = "nike_status.json"
+_NOTIFY      = "nike_notify.json"
+_DROPS       = "nike_drops.json"       # upcoming drops with timestamps for 24h reminders
+_AUTO_STYLES = "nike_auto_styles.json" # auto-discovered style codes
 
 
 class NikeSnkrsMonitor(BaseMonitor):
@@ -50,23 +62,31 @@ class NikeSnkrsMonitor(BaseMonitor):
     interval = NIKE_INTERVAL
 
     async def check(self) -> None:
-        seen   = await load(_SEEN)
-        status = await load(_STATUS)
-        notify = await load(_NOTIFY)
+        seen        = await load(_SEEN)
+        status      = await load(_STATUS)
+        notify      = await load(_NOTIFY)
+        drops       = await load(_DROPS)
+        auto_styles = await load(_AUTO_STYLES)
 
-        session = make_session("chrome110")   # Nike API works fine with Chrome 110
+        session = make_session("chrome110")
         try:
             objects = await self._fetch_feed(session)
             if objects:
-                await self._process_feed(objects, seen, status, notify)
+                await self._process_feed(objects, seen, status, notify, drops, auto_styles)
 
-            await self._check_watchlist(session, status, notify)
+            all_styles = list(set(NIKE_STYLE_CODES + list(auto_styles.keys())))
+            await self._check_watchlist(session, status, notify, drops, auto_styles, all_styles)
+
+            # Send 24h reminders for any drop happening within the next 24 hours
+            await self._send_day_before_reminders(drops, notify)
         finally:
             await session.close()
 
-        await save(_SEEN,   seen)
-        await save(_STATUS, status)
-        await save(_NOTIFY, notify)
+        await save(_SEEN,        seen)
+        await save(_STATUS,      status)
+        await save(_NOTIFY,      notify)
+        await save(_DROPS,       drops)
+        await save(_AUTO_STYLES, auto_styles)
 
     # ── Feed polling ──────────────────────────────────────────────────────────
 
@@ -86,23 +106,17 @@ class NikeSnkrsMonitor(BaseMonitor):
                 log.debug("[Nike] Feed error (%s): %s", feed_url, exc)
         return []
 
-    async def _process_feed(self, objects, seen, status, notify) -> None:
+    async def _process_feed(self, objects, seen, status, notify, drops, auto_styles) -> None:
         for obj in objects:
-            thread = obj if "publishedContent" in obj else obj.get("productInfo", [{}])[0]
-            # Extract from rollup_threads structure
             publish = obj.get("publishedContent", {})
-            nodes   = publish.get("nodes", [])
             props   = publish.get("properties", {})
 
-            product_id = obj.get("id", "")
-            launch_type = props.get("launchType", "")
-            launch_view = props.get("launchView", {}).get("status", "")
-            title = props.get("title") or props.get("subtitle") or "Unknown Drop"
+            product_id  = obj.get("id", "")
+            title       = props.get("title") or props.get("subtitle") or "Unknown Drop"
+            launch_view = props.get("launchView", {})
 
-            # Extract from productInfo array (threads/v2 structure)
             product_infos = obj.get("productInfo", [])
             if not product_infos and "channel_id" in obj:
-                # threads/v2: thread object itself
                 product_infos = [obj]
 
             for pi in product_infos:
@@ -110,22 +124,26 @@ class NikeSnkrsMonitor(BaseMonitor):
                 launch_status = (
                     pi.get("launchView", {}).get("status")
                     or pi.get("merchProduct", {}).get("status")
-                    or launch_view
+                    or launch_view.get("status", "")
                     or ""
                 ).upper()
-                price = pi.get("merchPrice", {}).get("currentRetail", 0)
-                currency = pi.get("merchPrice", {}).get("currency", "USD")
-                skus = pi.get("skus") or pi.get("availableSkus") or []
-                sizes = _extract_sizes(skus)
-                image = _extract_image(pi)
+                price    = pi.get("merchPrice", {}).get("currentRetail", 0)
+                skus     = pi.get("skus") or pi.get("availableSkus") or []
+                sizes    = _extract_sizes(skus)
+                image    = _extract_image(pi)
+                key      = style or product_id
+                price_str = f"${price:.0f}" if price else "N/A"
                 product_url = f"https://www.nike.com/launch/t/{style.lower()}" if style else "https://www.nike.com/launch"
 
-                key = style or product_id
-                prev = status.get(key, "")
+                # Auto-save newly discovered style codes
+                if style and style not in auto_styles:
+                    auto_styles[style] = {"title": title, "discovered": _iso_now()}
+                    log.info("[Nike SNKRS] Auto-discovered style code: %s — %s", style, title)
+
+                prev   = status.get(key, "")
                 on_cool = (time.time() - notify.get(key, 0)) < NOTIFY_COOLDOWN
 
                 if launch_status in AVAILABLE_STATUSES and not on_cool and prev not in AVAILABLE_STATUSES:
-                    price_str = f"${price:.0f}" if price else "N/A"
                     log.info("[Nike SNKRS] LIVE DROP: %s | %s | %s", title, style, price_str)
                     await send_nike_drop(
                         NIKE_SNKRS_WEBHOOK_URL,
@@ -137,31 +155,37 @@ class NikeSnkrsMonitor(BaseMonitor):
                     notify[key] = time.time()
 
                 elif launch_status in UPCOMING_STATUSES and key not in seen:
-                    price_str = f"${price:.0f}" if price else "N/A"
-                    drop_date = _extract_drop_date(pi, props)
-                    log.info("[Nike SNKRS] UPCOMING: %s | %s", title, style)
+                    drop_date_str = _extract_drop_date(pi, props)
+                    drop_ts       = _extract_drop_timestamp(pi, props)
+                    log.info("[Nike SNKRS] UPCOMING: %s | %s | drop=%s", title, style, drop_date_str)
                     await send_nike_drop(
                         UPCOMING_DROPS_WEBHOOK_URL,
                         name=title, url=product_url,
                         price=price_str, sizes=sizes,
                         style_code=style, image=image,
                         upcoming=True,
-                        drop_date=drop_date,
+                        drop_date=drop_date_str,
                     )
                     seen[key] = True
+                    # Save for 24h reminder
+                    drops[key] = {
+                        "title": title, "url": product_url, "price": price_str,
+                        "image": image, "style_code": style,
+                        "drop_date_str": drop_date_str, "drop_ts": drop_ts,
+                        "reminded_24h": False,
+                    }
 
                 status[key] = launch_status
 
     # ── Watchlist ─────────────────────────────────────────────────────────────
 
-    async def _check_watchlist(self, session, status, notify) -> None:
+    async def _check_watchlist(self, session, status, notify, drops, auto_styles, all_styles) -> None:
         ua = random_ua()
         headers = base_headers(ua, referer="https://www.nike.com/")
         headers["Accept"] = "application/json"
 
-        for style_code in NIKE_STYLE_CODES:
+        for style_code in all_styles:
             await asyncio.sleep(0.5)
-            style_clean = style_code.replace("-", "")
             api_url = (
                 f"https://api.nike.com/product_feed/threads/v2"
                 f"?filter=marketplace(US)&filter=language(en)"
@@ -176,27 +200,30 @@ class NikeSnkrsMonitor(BaseMonitor):
                     continue
 
                 obj = objects[0]
+                props = obj.get("publishedContent", {}).get("properties", {})
                 product_infos = obj.get("productInfo", []) or [obj]
                 for pi in product_infos:
                     launch_status = (
                         pi.get("launchView", {}).get("status")
                         or pi.get("merchProduct", {}).get("status", "")
                     ).upper()
-                    price = pi.get("merchPrice", {}).get("currentRetail", 0)
-                    skus  = pi.get("skus") or pi.get("availableSkus") or []
-                    sizes = _extract_sizes(skus)
-                    image = _extract_image(pi)
-                    title = (pi.get("productContent", {}).get("fullTitle")
-                             or obj.get("publishedContent", {}).get("properties", {}).get("title")
-                             or style_code)
+                    price    = pi.get("merchPrice", {}).get("currentRetail", 0)
+                    skus     = pi.get("skus") or pi.get("availableSkus") or []
+                    sizes    = _extract_sizes(skus)
+                    image    = _extract_image(pi)
+                    title    = (
+                        pi.get("productContent", {}).get("fullTitle")
+                        or props.get("title")
+                        or style_code
+                    )
+                    price_str   = f"${price:.0f}" if price else "N/A"
                     product_url = f"https://www.nike.com/launch/t/{style_code.lower()}"
 
-                    prev = status.get(style_code, "")
+                    prev    = status.get(style_code, "")
                     on_cool = (time.time() - notify.get(style_code, 0)) < NOTIFY_COOLDOWN
 
                     if launch_status in AVAILABLE_STATUSES and not on_cool and prev not in AVAILABLE_STATUSES:
-                        price_str = f"${price:.0f}" if price else "N/A"
-                        log.info("[Nike SNKRS] WATCHLIST HIT: %s | %s", style_code, title)
+                        log.info("[Nike SNKRS] WATCHLIST LIVE: %s | %s", style_code, title)
                         await send_nike_drop(
                             NIKE_SNKRS_WEBHOOK_URL,
                             name=title, url=product_url,
@@ -206,23 +233,58 @@ class NikeSnkrsMonitor(BaseMonitor):
                         )
                         notify[style_code] = time.time()
 
-                    elif launch_status in UPCOMING_STATUSES and style_code not in status:
-                        price_str = f"${price:.0f}" if price else "N/A"
-                        drop_date = _extract_drop_date(pi, {})
-                        log.info("[Nike SNKRS] WATCHLIST UPCOMING: %s | %s", style_code, title)
+                    elif launch_status in UPCOMING_STATUSES and style_code not in drops:
+                        drop_date_str = _extract_drop_date(pi, props)
+                        drop_ts       = _extract_drop_timestamp(pi, props)
+                        log.info("[Nike SNKRS] WATCHLIST UPCOMING: %s | %s | drop=%s", style_code, title, drop_date_str)
                         await send_nike_drop(
                             UPCOMING_DROPS_WEBHOOK_URL,
                             name=title, url=product_url,
                             price=price_str, sizes=sizes,
                             style_code=style_code, image=image,
                             upcoming=True,
-                            drop_date=drop_date,
+                            drop_date=drop_date_str,
                         )
+                        drops[style_code] = {
+                            "title": title, "url": product_url, "price": price_str,
+                            "image": image, "style_code": style_code,
+                            "drop_date_str": drop_date_str, "drop_ts": drop_ts,
+                            "reminded_24h": False,
+                        }
 
                     status[style_code] = launch_status
 
             except Exception as exc:
                 log.debug("[Nike] Watchlist error %s: %s", style_code, exc)
+
+    # ── Day-before reminders ───────────────────────────────────────────────────
+
+    async def _send_day_before_reminders(self, drops: dict, notify: dict) -> None:
+        """Send @here alert when a drop is within the next 24 hours."""
+        now = time.time()
+        for key, info in drops.items():
+            if info.get("reminded_24h"):
+                continue
+            drop_ts = info.get("drop_ts", 0)
+            if drop_ts == 0:
+                continue
+            hours_until = (drop_ts - now) / 3600
+            if 0 < hours_until <= 24:
+                log.info("[Nike SNKRS] 24H REMINDER: %s drops in %.1fh", info.get("style_code", key), hours_until)
+                await send_nike_drop(
+                    UPCOMING_DROPS_WEBHOOK_URL,
+                    name=info["title"],
+                    url=info["url"],
+                    price=info["price"],
+                    sizes=[],
+                    style_code=info.get("style_code", key),
+                    image=info.get("image", ""),
+                    upcoming=True,
+                    drop_date=info.get("drop_date_str", ""),
+                    is_24h_reminder=True,
+                    hours_until=hours_until,
+                )
+                info["reminded_24h"] = True
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -254,22 +316,26 @@ def _extract_image(pi: dict) -> str:
 
 def _extract_drop_date(pi: dict, props: dict) -> str:
     """Return a human-readable drop date/time string, or empty string if unknown."""
-    import datetime
-    # Try launchView startEntryDate (most precise — includes time)
-    for source in (pi.get("launchView", {}), props.get("launchView", {})):
-        raw = source.get("startEntryDate") or source.get("startDate") or source.get("publishStartDate")
-        if raw:
-            try:
-                dt = datetime.datetime.fromisoformat(raw.replace("Z", "+00:00"))
-                return dt.strftime("%b %d, %Y at %I:%M %p ET")
-            except Exception:
-                return raw
-    # Fallback: publishStartDate at top-level props
-    raw = props.get("publishStartDate") or props.get("startDate")
-    if raw:
-        try:
-            dt = datetime.datetime.fromisoformat(raw.replace("Z", "+00:00"))
-            return dt.strftime("%b %d, %Y at %I:%M %p ET")
-        except Exception:
-            return raw
+    ts = _extract_drop_timestamp(pi, props)
+    if ts:
+        dt = datetime.datetime.utcfromtimestamp(ts)
+        return dt.strftime("%b %d, %Y at %I:%M %p ET")
     return ""
+
+
+def _extract_drop_timestamp(pi: dict, props: dict) -> float:
+    """Return Unix timestamp of the drop, or 0 if unknown."""
+    for source in (pi.get("launchView", {}), props.get("launchView", {}), props):
+        for key in ("startEntryDate", "startDate", "publishStartDate"):
+            raw = source.get(key)
+            if raw:
+                try:
+                    dt = datetime.datetime.fromisoformat(raw.replace("Z", "+00:00"))
+                    return dt.timestamp()
+                except Exception:
+                    pass
+    return 0.0
+
+
+def _iso_now() -> str:
+    return datetime.datetime.utcnow().isoformat() + "Z"

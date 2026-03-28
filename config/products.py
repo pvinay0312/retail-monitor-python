@@ -141,6 +141,171 @@ AMAZON_PRODUCTS = [
     # Personal care (Subscribe & Save freebies)
     "https://www.amazon.com/Gillette-Fusion5-Razor-Blade-Refills/dp/B01N5TCKZF",
     "https://www.amazon.com/Colgate-Whitening-Toothpaste-Total-Whitening/dp/B07XZFD5JR",
+    "https://www.amazon.com/Dove-Beauty-Bar-Moisturizing-Cleanser/dp/B00OY7NTDW",
+    "https://www.amazon.com/Head-Shoulders-Classic-Clean-Shampoo/dp/B00BEYW4XG",
+    # More TVs
+    "https://www.amazon.com/TCL-Class-QLED-Smart-Google/dp/B0B52PSLN4",
+    "https://www.amazon.com/Hisense-Class-ULED-Mini-LED/dp/B0B4FD9TRP",
+    "https://www.amazon.com/VIZIO-43-Inch-SmartCast-Television/dp/B09GSWLH9W",
+    "https://www.amazon.com/Samsung-QN85B-Neo-QLED-Smart/dp/B09VB7VRTT",
+    "https://www.amazon.com/LG-Class-OLED-Smart-TV/dp/B09MGLVJ4K",
+    # More laptops
+    "https://www.amazon.com/Lenovo-IdeaPad-Business-Processor-Storage/dp/B09TQXMM4P",
+    "https://www.amazon.com/ASUS-VivoBook-Display-Fingerprint-Backlit/dp/B0BNJFH52H",
+    "https://www.amazon.com/Acer-Aspire-Display-Backlit-Keyboard/dp/B0B4GYVNFY",
+    "https://www.amazon.com/HP-Laptop-Intel-Core-i5/dp/B09TQXMF68",
+    "https://www.amazon.com/Dell-XPS-Laptop-13-9315/dp/B0BLBLZ1MC",
+    "https://www.amazon.com/Microsoft-Surface-Pro-Platinum-Device/dp/B0CMDXWVL6",
+    # Monitors & displays
+    "https://www.amazon.com/LG-27GL83A-B-Ultragear-Compatible-Response/dp/B07XTLW1X7",
+    "https://www.amazon.com/Samsung-Odyssey-FreeSync-Monitor-LC27G55T/dp/B08G3MCHMJ",
+    "https://www.amazon.com/Dell-S2722DGM-Curved-Gaming-Monitor/dp/B095WCQN7T",
+    "https://www.amazon.com/ASUS-1080P-Monitor-VG248QG-FreeSync/dp/B07H93TK3T",
+    "https://www.amazon.com/Acer-SB220Q-Ultra-Thin-Frame-Monitor/dp/B07CVL2D2S",
+    # Tools & home improvement
+    "https://www.amazon.com/DEWALT-Cordless-Drill-Compact-DCD771C2/dp/B00ET4N2EY",
+    "https://www.amazon.com/BLACK-DECKER-Cordless-Drill-LDX120C/dp/B004OFW51O",
+    "https://www.amazon.com/CRAFTSMAN-Mechanics-Tool-Set-99-Piece/dp/B07WRRJR55",
+    "https://www.amazon.com/Makita-XPH12Z-Brushless-Cordless-Hammer/dp/B07NFNG5MZ",
+    "https://www.amazon.com/WD-40-Multi-Use-Product-Smart-Straw/dp/B0006IBQXQ",
+    "https://www.amazon.com/MILWAUKEE-2606-22CT-M18-Compact-Drill/dp/B07PMXPL86",
+    "https://www.amazon.com/Stanley-STHT77588-Measuring-Tape/dp/B003MC3KGC",
+    # Car accessories
+    "https://www.amazon.com/Anker-Roav-DashCam-Nighthawk-Stabilization/dp/B06XSVTJQP",
+    "https://www.amazon.com/NOCO-Boost-Plus-GB40-1000Amp/dp/B015TKUPIC",
+    "https://www.amazon.com/Garmin-DriveSmart-Bluetooth-Optional/dp/B07R7K9TH2",
+    "https://www.amazon.com/VIOFO-A119-MINI-2-Dash-Cam/dp/B09FJBKXNL",
+    "https://www.amazon.com/Car-Phone-Mount-Holder-Dashboard/dp/B08FQTKXSX",
+    "https://www.amazon.com/Chemical-Guys-CWS_301_16-Extreme-Cleanser/dp/B00FMJNGK6",
+    "https://www.amazon.com/Meguiars-G7014J-Gold-Class-Carnauba/dp/B0000AY0KX",
+    # Outdoor & patio
+    "https://www.amazon.com/Coleman-Portable-Camping-Chair-Arm/dp/B000ARPS5A",
+    "https://www.amazon.com/TIMBER-RIDGE-Zero-Gravity-Recliner/dp/B01A4YQM3G",
+    "https://www.amazon.com/Weber-Spirit-II-E-310-Liquid/dp/B074B3PRYN",
+    "https://www.amazon.com/Solo-Stove-Bonfire-Lightweight-Portable/dp/B09GR7NJWL",
+    "https://www.amazon.com/Outsunny-Umbrella-Patio-Cantilever-Hanging/dp/B09CDQHVQR",
+    "https://www.amazon.com/EVER-ADVANCED-Lightweight-Outdoor-Breathable/dp/B07PHXFHRF",
+    # Luggage & travel
+    "https://www.amazon.com/AmazonBasics-Hardside-Spinner-Luggage-Black/dp/B07X8QLPT1",
+    "https://www.amazon.com/Travelpro-Maxlite-Lightweight-Expandable-Suitcase/dp/B07R4JZZM4",
+    "https://www.amazon.com/Samsonite-Omni-PC-Hardside-Spinner/dp/B009WBDPYU",
+    "https://www.amazon.com/BAGSMART-Electronic-Organizer-Universal-Accessories/dp/B074W94QBJ",
+    "https://www.amazon.com/AmazonBasics-Packing-Travel-Cubes-Set/dp/B014VBGBER",
+    # Sports & outdoors
+    "https://www.amazon.com/Yes4All-Solid-Kettlebell-Weight/dp/B00CBZUUOU",
+    "https://www.amazon.com/Intex-Explorer-K2-Kayak-Person/dp/B002IXNXXY",
+    "https://www.amazon.com/Wilson-Adult-Recreational-Tennis-Racket/dp/B008G8BPRW",
+    "https://www.amazon.com/Spalding-NBA-Varsity-Outdoor-Basketball/dp/B07WNWJCQJ",
+    "https://www.amazon.com/Franklin-Sports-Pickleball-Paddle-Balls/dp/B07MK9LBHZ",
+    "https://www.amazon.com/Callaway-Strata-Complete-Golf-Set/dp/B007Q3JQA4",
+    "https://www.amazon.com/HEAD-Ti-S6-Racquets/dp/B000BT01BG",
+    # Musical instruments
+    "https://www.amazon.com/Casio-CT-S300-Portable-Keyboard/dp/B07J65HT4X",
+    "https://www.amazon.com/Yamaha-PSS-A50-Portable-Keyboard/dp/B082YZNJ3P",
+    "https://www.amazon.com/Donner-Acoustic-Guitar-DG-1A-Starter/dp/B07GQPQHJ1",
+    "https://www.amazon.com/Hal-Leonard-Guitar-Method-Books/dp/0793533079",
+    # Health & wellness devices
+    "https://www.amazon.com/Withings-Body-Smart-Advanced-Composition/dp/B0CF8DK4KK",
+    "https://www.amazon.com/Omron-Evolv-Wireless-Monitor-BP7350/dp/B07CC6FMFT",
+    "https://www.amazon.com/Fitbit-Advanced-Tracker-Health-Monitoring/dp/B0BJWJWSVC",
+    "https://www.amazon.com/Garmin-Forerunner-Smartwatch-Advanced/dp/B0B41QBKRD",
+    "https://www.amazon.com/RENPHO-Smart-Scale-Bluetooth-Composition/dp/B01N1UX8RW",
+    # Office supplies & desk
+    "https://www.amazon.com/AmazonBasics-Ergonomic-Adjustable-Computer-Chair/dp/B073ZVZQ6Z",
+    "https://www.amazon.com/Logitech-MX-Master-Wireless-Mouse/dp/B07S395RWD",
+    "https://www.amazon.com/HP-LaserJet-Printer-M209dwe-Works/dp/B09C3XTMKP",
+    "https://www.amazon.com/Canon-PIXMA-Wireless-Printer-Printing/dp/B09BQZJZPH",
+    "https://www.amazon.com/Epson-EcoTank-ET-2803-Cartridge-Free/dp/B09CRVD48C",
+    "https://www.amazon.com/Anker-PowerConf-Bluetooth-Speakerphone/dp/B07QCS2SZP",
+    "https://www.amazon.com/Logitech-C920x-Pro-Webcam-Recording/dp/B085TFF7M1",
+    "https://www.amazon.com/Elgato-Stream-Deck-Controller-Customizable/dp/B06XKNZT1P",
+    # Board games & toys
+    "https://www.amazon.com/Catan-Board-Game/dp/B00U26V4VQ",
+    "https://www.amazon.com/Ticket-Ride-Strategy-Board-Game/dp/B000BW7FKY",
+    "https://www.amazon.com/Codenames-Strategy-Party-Card-Game/dp/B014Q1XX9S",
+    "https://www.amazon.com/Hasbro-Monopoly-Classic-Game/dp/B00SIVLTM4",
+    "https://www.amazon.com/Jenga-Game-54-Hardwood-Blocks/dp/B078Q1D5JR",
+    "https://www.amazon.com/LEGO-Technic-Bugatti-Bolide-42151/dp/B0BF3V2T8P",
+    "https://www.amazon.com/LEGO-Botanical-Collection-Wildflower-Bouquet/dp/B09JWST8KX",
+    # More smart home
+    "https://www.amazon.com/Philips-Hue-Brilliance-Starter-Compatible/dp/B07GFCN3WK",
+    "https://www.amazon.com/ecobee-SmartThermostat-Premium-built-in/dp/B09XXS48P8",
+    "https://www.amazon.com/Yale-Assure-Touchscreen-Deadbolt-YRD226/dp/B07NRHKP87",
+    "https://www.amazon.com/Arlo-Pro-Security-Camera-VMC4050P/dp/B07HGJCZQR",
+    "https://www.amazon.com/Blink-Outdoor-4th-Gen-security/dp/B0B1N5HW22",
+    "https://www.amazon.com/TP-Link-Tapo-Security-Camera/dp/B08HJKTN8Z",
+    "https://www.amazon.com/Google-Nest-Hub-2nd-Gen/dp/B08XMFKF47",
+    # Projectors
+    "https://www.amazon.com/XGIMI-Projector-Android-Harman-Kardon/dp/B09DMTGWL8",
+    "https://www.amazon.com/Anker-Nebula-Capsule-Android-Projector/dp/B08LWSJ1V4",
+    "https://www.amazon.com/Epson-EpiqVision-Mini-EF12-Streaming/dp/B091TGTHWG",
+    # Drones & cameras
+    "https://www.amazon.com/DJI-Mini-4-Pro-Drone/dp/B0CF9GQMJP",
+    "https://www.amazon.com/GoPro-HERO12-Black-Waterproof-Stabilization/dp/B0CDP3XGHQ",
+    "https://www.amazon.com/Canon-EOS-Rebel-SL3-Video/dp/B07MV3P7M8",
+    "https://www.amazon.com/Sony-Full-Frame-Mirrorless-Interchangeable/dp/B09BBGPTLG",
+    "https://www.amazon.com/Fujifilm-X-T30-II-Body-Silver/dp/B09GBC3B9B",
+    # Streaming devices
+    "https://www.amazon.com/Introducing-Amazon-Fire-Stick-with-Alexa/dp/B0BTXZWF3K",
+    "https://www.amazon.com/Google-Chromecast-with-Google-TV/dp/B08KRV7S22",
+    "https://www.amazon.com/Roku-Streaming-Stick-Plus-Streaming/dp/B075XN5L53",
+    "https://www.amazon.com/Apple-TV-4K-Wi-Fi/dp/B09JCDG2JP",
+    # Tablets
+    "https://www.amazon.com/Amazon-Fire-HD-10-tablet/dp/B08F5MK6VB",
+    "https://www.amazon.com/Amazon-Fire-Max-11-tablet/dp/B0B1VQ1ZQY",
+    "https://www.amazon.com/Samsung-Galaxy-Tab-A8-SM-X200NZAAXAR/dp/B09N9HWSHY",
+    "https://www.amazon.com/Apple-2022-iPad-Wi-Fi-64GB/dp/B0BJLXMVTM",
+    # Phones & accessories
+    "https://www.amazon.com/Samsung-Galaxy-S23-Unlocked-Smartphone/dp/B0BLP2Y7TJ",
+    "https://www.amazon.com/Google-Pixel-7a-Unlocked-Smartphone/dp/B0BZ9XNBRB",
+    "https://www.amazon.com/Mophie-juice-pack-Wireless-Compatible/dp/B09Y26QK3H",
+    "https://www.amazon.com/PopSockets-PopGrip-Swappable-Phones-Tablets/dp/B075YG3931",
+    # More kitchen
+    "https://www.amazon.com/Breville-BJE830BSS-Juice-Fountain-Cold-XL/dp/B07DQXM6RL",
+    "https://www.amazon.com/Vitamix-5200-Blender-Black-Standard/dp/B008H4SLV6",
+    "https://www.amazon.com/Cuisinart-CBK-110P1-Compact-Automatic-Breadmaker/dp/B0000Y3MHA",
+    "https://www.amazon.com/KitchenAid-KSM150PSER-Artisan-Tilt-Head-Stand/dp/B00005UP2P",
+    "https://www.amazon.com/Instant-Pot-Duo-Crisp-11-in-1/dp/B07W55LHPK",
+    "https://www.amazon.com/Ninja-BL770-Blender-Processing-Smoothies/dp/B00NGV4506",
+    "https://www.amazon.com/Crock-Pot-SCV700SS-7-Quart-Stainless/dp/B000G0I0E2",
+    "https://www.amazon.com/Chefman-TurboFry-Space-Saving-Rotisserie/dp/B08HJZS1RK",
+    # Food & snacks (high coupon rate)
+    "https://www.amazon.com/Kind-Variety-Count-Gluten-Breakfast/dp/B076FVL84C",
+    "https://www.amazon.com/Clif-Bar-Energy-Variety-Pack/dp/B079WVDGCM",
+    "https://www.amazon.com/Larabar-Fruit-Nut-Bar-Variety/dp/B018TP2J4G",
+    "https://www.amazon.com/Celsius-Sparkling-Orange-Energy-Drink/dp/B00JBP6LQG",
+    "https://www.amazon.com/Body-Armor-Sports-Drink-Variety/dp/B07CM2CLHS",
+    # More supplements
+    "https://www.amazon.com/Garden-Life-Certified-Organic-Plant-Based/dp/B00VD8VWZM",
+    "https://www.amazon.com/NOW-Supplements-Immune-System-Capsules/dp/B001G7R2QW",
+    "https://www.amazon.com/Natrol-Melatonin-Sleep-5mg-Strawberry/dp/B003TOAZP4",
+    "https://www.amazon.com/Sports-Research-Collagen-Peptides-Servings/dp/B00Y7GNMHM",
+    # More pet supplies
+    "https://www.amazon.com/Chuckit-Ultra-Ball-Medium-Pack/dp/B002ARGG4E",
+    "https://www.amazon.com/KONG-Classic-Dog-Toy-Medium/dp/B0002AR0I8",
+    "https://www.amazon.com/PetSafe-6-Meal-Automatic-Pet-Feeder/dp/B07GZGJ6MH",
+    "https://www.amazon.com/Frisco-Deluxe-Carrier-Cats-Pounds/dp/B07KFBKX2J",
+    # Back to school / office
+    "https://www.amazon.com/Amazon-Basics-Mechanical-Pencils-Erasers/dp/B07G98CMMY",
+    "https://www.amazon.com/Five-Star-Wirebound-Notebook-College/dp/B07T3CQ1HX",
+    "https://www.amazon.com/Sharpie-Permanent-Markers-Assorted-Colors/dp/B00006IFIV",
+    "https://www.amazon.com/Post-it-Notes-Super-Sticky/dp/B00006JNNG",
+    # Home improvement
+    "https://www.amazon.com/LEVOIT-Purifiers-Cleaner-Filtration-Eliminators/dp/B07D8TQN68",
+    "https://www.amazon.com/Hamilton-Beach-41996-Digital-Air-Purifier/dp/B07CNDFKFP",
+    "https://www.amazon.com/Honeywell-HPA300-True-HEPA-Allergen/dp/B00GS0U5CG",
+    "https://www.amazon.com/LEVOIT-Humidifiers-Bedroom-Cool-Mist/dp/B07L5SSHRD",
+    "https://www.amazon.com/Vornado-660-Large-Whole-Room/dp/B0034DGN4E",
+    "https://www.amazon.com/Dyson-Purifier-Cool-Gen1-DP10/dp/B0CJVGJLRC",
+    # Security cameras
+    "https://www.amazon.com/Wyze-Cam-v3-Color-Night/dp/B08MQZXSFC",
+    "https://www.amazon.com/Ring-Stick-Up-Cam-Battery/dp/B07ZQ66TL3",
+    "https://www.amazon.com/Eufy-Security-Detection-Compatible-Assistant/dp/B086XHG94X",
+    # Bedding & bath
+    "https://www.amazon.com/Beckham-Hotel-Collection-Gel-Pillows/dp/B01LYNW421",
+    "https://www.amazon.com/SLEEP-ZONE-Cooling-Comforter-Machine/dp/B08CJKD8LZ",
+    "https://www.amazon.com/Amazon-Basics-Lightweight-Microfiber-Sheet/dp/B0777YMY89",
+    "https://www.amazon.com/Mellanni-Bed-Sheet-Set-Full/dp/B01IB09K7Y",
     # Gardening
     "https://www.amazon.com/Fiskars-Bypass-Pruning-Shears-Gardening/dp/B00004SD5U",
     "https://www.amazon.com/Garden-Hose-Expandable-50ft/dp/B078WGVGKY",
@@ -453,6 +618,8 @@ NIKE_STYLE_CODES = [
     "FV5104-100",  # Low University Blue
     # Nike Air Max
     "HJ5996-001",  # Women's Air Max 95 Pink Foam
+    # 2025 / Upcoming
+    "IM9113-300",  # User-flagged upcoming drop
     # Air Jordan 4
     "FQ8138-006",  # Bred Reimagined 2024
     "AQ3816-006",  # Military Blue 2024

@@ -189,11 +189,17 @@ async def send_nike_drop(
     image: str = "",
     upcoming: bool = False,
     drop_date: str = "",
+    is_24h_reminder: bool = False,
+    hours_until: float = 0,
 ) -> bool:
     stockx_query = name.replace(" ", "%20")
     stockx_url = f"https://stockx.com/search/sneakers?s={stockx_query}"
 
-    if upcoming:
+    if is_24h_reminder:
+        hrs = int(hours_until)
+        title = f"⏰ DROPPING IN ~{hrs}H — {name}"
+        description = f"@here **This drop goes live in approximately {hrs} hour{'s' if hrs != 1 else ''}. Get ready!**"
+    elif upcoming:
         title = f"📅 UPCOMING DROP — {name}"
         description = "@here **New drop announced on SNKRS! Mark your calendar.**"
     else:
