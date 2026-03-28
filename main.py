@@ -115,10 +115,10 @@ async def _main() -> None:
         AmazonOutletMonitor(),    # auto-scans amazon.com/outlet/deals (overstock)
         WootMonitor(),            # woot.com daily deals + Woot-Off flash sales
         BestBuyMonitor(),
-        # WalmartMonitor(),   # needs CAPTCHA solver — walmart.com/robot-or-human blocks Playwright
+        WalmartMonitor(),
         TargetMonitor(),
         NikeSnkrsMonitor(),
-        # FootsitesMonitor(), # needs CAPTCHA solver — Kasada challenge not solvable via stealth alone
+        # FootsitesMonitor(),  # Kasada challenges per-page — not bypassable without paid solver
     ]
 
     tasks = [asyncio.create_task(m.run(), name=m.name) for m in monitors]
