@@ -779,6 +779,7 @@ NIKE_STYLE_CODES = [
     "HF9982-001",  # Air Max 97 Year of the Snake 2025
     "FB9109-200",  # Air Max Plus OG Desert Sand 2025
     "IM9113-300",  # User-flagged upcoming drop
+    "IF4396-100",  # User-flagged upcoming drop
 
     # ── Air Foamposite (huge collector item) ──────────────────────────────────
     "FV6126-600",  # Air Foamposite Pro "Phoenix Suns"

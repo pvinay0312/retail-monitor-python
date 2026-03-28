@@ -308,11 +308,19 @@ class NikeSnkrsMonitor(BaseMonitor):
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _extract_sizes(skus: list) -> list[str]:
+    # Nike uses several different availability strings across API versions
+    AVAILABLE = {"IN_STOCK", "ACTIVE", "STOCKED", "AVAILABLE", "PURCHASABLE", "DAN", "CLOSEOUT"}
     sizes = []
     for sku in skus:
-        nl = sku.get("nikeSize") or sku.get("localizedSize") or sku.get("countrySpecifications", [{}])[0].get("localizedSize", "")
+        nl = (
+            sku.get("nikeSize")
+            or sku.get("localizedSize")
+            or (sku.get("countrySpecifications") or [{}])[0].get("localizedSize", "")
+        )
         avail = sku.get("availabilityStatus", "").upper()
-        if nl and avail in ("IN_STOCK", "ACTIVE", "STOCKED"):
+        # If status is explicitly OOS/unavailable, skip; otherwise include if we have a size
+        oos = {"OUT_OF_STOCK", "CLOSEOUT_OOS", "HOLD", "NOT_AVAILABLE", "INACTIVE"}
+        if nl and avail not in oos and (avail in AVAILABLE or avail == ""):
             sizes.append(nl)
     return sorted(set(sizes), key=lambda s: _size_sort_key(s))
 
