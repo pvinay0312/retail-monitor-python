@@ -55,10 +55,17 @@ class TargetMonitor(BaseMonitor):
         stock  = await load(_STOCK)
         notify = await load(_NOTIFY)
 
+        checked = deals_found = restocks_found = 0
+
         session = make_session("chrome120")
         try:
             for url in TARGET_PRODUCTS:
-                await self._check_product(url, session, prices, stock, notify)
+                result = await self._check_product(url, session, prices, stock, notify)
+                if result:
+                    c, d, r = result
+                    checked        += c
+                    deals_found    += d
+                    restocks_found += r
                 await asyncio.sleep(2)
         finally:
             await session.close()
@@ -66,17 +73,21 @@ class TargetMonitor(BaseMonitor):
         await save(_PRICES, prices)
         await save(_STOCK,  stock)
         await save(_NOTIFY, notify)
+        log.info("[Target] Cycle complete — %d/%d TCINs fetched | %d deals | %d restocks",
+                 checked, len(TARGET_PRODUCTS), deals_found, restocks_found)
 
-    async def _check_product(self, url, session, prices, stock, notify) -> None:
+    async def _check_product(self, url, session, prices, stock, notify) -> tuple[int, int, int] | None:
+        """Returns (checked, deals_found, restocks_found) or None on parse failure."""
         tcin = _tcin(url)
         if not tcin:
-            return
+            return None
 
         product = await self._fetch_redsky(tcin, session)
         if not product:
             product = await self._fetch_html(url, session)
         if not product:
-            return
+            log.debug("[Target] No data for TCIN %s — Redsky and HTML both failed", tcin)
+            return None
 
         name      = product.get("name", "Unknown")[:200]
         price     = product.get("price")
@@ -85,10 +96,15 @@ class TargetMonitor(BaseMonitor):
         image     = product.get("image", "")
 
         if price is None:
-            return
+            return None
 
         price_str = f"${price:.2f}"
         was_str   = f"${was_price:.2f}" if was_price else "N/A"
+
+        log.debug("[Target] %s | %s | was=%s | in_stock=%s",
+                  name[:40], price_str, was_str, in_stock)
+
+        deals_found = restocks_found = 0
 
         # ── Restock ───────────────────────────────────────────────────────────
         prev_in_stock = stock.get(tcin, {}).get("in_stock", True)
@@ -100,6 +116,7 @@ class TargetMonitor(BaseMonitor):
                 name=name, url=url, price=price_str, image=image,
                 extra_fields=[{"name": "🔑 TCIN", "value": tcin, "inline": True}],
             )
+            restocks_found = 1
 
         stock[tcin] = {
             "in_stock":  in_stock,
@@ -124,8 +141,10 @@ class TargetMonitor(BaseMonitor):
                 extra_fields=[{"name": "🔑 TCIN", "value": tcin, "inline": True}],
             )
             notify[cooldown_key] = time.time()
+            deals_found = 1
 
         prices[tcin] = price
+        return 1, deals_found, restocks_found
 
     # ── Data sources ──────────────────────────────────────────────────────────
 
@@ -142,7 +161,12 @@ class TargetMonitor(BaseMonitor):
             if resp.status_code == 429:
                 self._blocked_until = time.time() + BOT_BACKOFF
                 return None
+            if resp.status_code in (401, 403):
+                log.warning("[Target] Redsky API key rejected (HTTP %d) for TCIN %s — key may be expired",
+                            resp.status_code, tcin)
+                return None
             if resp.status_code != 200:
+                log.debug("[Target] Redsky HTTP %d for TCIN %s", resp.status_code, tcin)
                 return None
             data = resp.json()
             p = data.get("data", {}).get("product", {})

@@ -20,6 +20,7 @@ from config.settings import WALMART_WEBHOOK_URL, WALMART_INTERVAL
 from monitors.base import BaseMonitor
 from utils.anti_bot import make_session, base_headers, random_ua
 from utils.discord_client import send_deal_alert, send_restock_alert
+from utils.playwright_session import get_site_cookies, invalidate as invalidate_cookies
 from utils.storage import load, save
 
 log = logging.getLogger(__name__)
@@ -55,27 +56,24 @@ class WalmartMonitor(BaseMonitor):
         stock  = await load(_STOCK)
         notify = await load(_NOTIFY)
 
+        # ── Akamai cookie extraction via Playwright ───────────────────────────
+        # Akamai Bot Manager sets cookies (ak_bmsc, bm_sz, _abck, etc.) after
+        # running its sensor JavaScript on a page load.  Attaching these cookies
+        # to subsequent requests makes them look like they came from a session
+        # that already passed the Akamai challenge.
+        wm_cookies = await get_site_cookies("https://www.walmart.com/")
+
         # Rotate chrome version each cycle to vary TLS fingerprint
         impersonate = random.choice(["chrome110", "chrome120"])
         session = make_session(impersonate)
         try:
-            # Session warmup — visit homepage first to pick up session/consent cookies
-            # Akamai tracks session behaviour; a homepage visit makes subsequent
-            # product requests look like natural SPA navigation.
-            try:
-                warmup_ua = random_ua()
-                warmup_h  = base_headers(warmup_ua, referer="https://www.google.com/")
-                await session.get("https://www.walmart.com/", headers=warmup_h, timeout=15)
-                await asyncio.sleep(random.uniform(2.0, 4.0))
-            except Exception:
-                pass  # warmup failure is non-fatal
 
             for url in WALMART_PRODUCTS:
                 item_id = _item_id(url)
                 if time.time() < self._url_blocked.get(item_id, 0):
                     log.debug("[Walmart] Skipping %s (backoff)", item_id)
                     continue
-                await self._check_product(url, session, prices, stock, notify)
+                await self._check_product(url, session, prices, stock, notify, wm_cookies)
                 # Random delay 3–7s between products — mimics human browsing pace
                 await asyncio.sleep(random.uniform(3.0, 7.0))
         finally:
@@ -85,7 +83,8 @@ class WalmartMonitor(BaseMonitor):
         await save(_STOCK,  stock)
         await save(_NOTIFY, notify)
 
-    async def _try_terra_firma(self, item_id: str, product_url: str, session) -> dict | None:
+    async def _try_terra_firma(self, item_id: str, product_url: str, session,
+                               cookies: dict | None = None) -> dict | None:
         """
         Call Walmart's internal XHR API (terra-firma) for product data.
         This is a JSON endpoint the frontend uses for SPA navigation — it tends
@@ -110,7 +109,7 @@ class WalmartMonitor(BaseMonitor):
         headers.pop("Sec-Fetch-User", None)
 
         try:
-            resp = await session.get(api_url, headers=headers, timeout=15)
+            resp = await session.get(api_url, headers=headers, cookies=cookies or {}, timeout=15)
         except Exception as exc:
             log.debug("[Walmart] Terra-firma error %s: %s", item_id, exc)
             return None
@@ -119,6 +118,7 @@ class WalmartMonitor(BaseMonitor):
             log.warning("[Walmart] Terra-firma blocked (%d) %s — backoff %ds",
                         resp.status_code, item_id, BOT_BACKOFF)
             self._url_blocked[item_id] = time.time() + BOT_BACKOFF
+            invalidate_cookies("https://www.walmart.com/")
             return None
 
         if resp.status_code != 200:
@@ -139,12 +139,13 @@ class WalmartMonitor(BaseMonitor):
         except Exception:
             return None
 
-    async def _check_product(self, url, session, prices, stock, notify) -> None:
+    async def _check_product(self, url, session, prices, stock, notify,
+                             cookies: dict | None = None) -> None:
         item_id = _item_id(url)
 
         # ── Try terra-firma JSON API first (lighter bot protection) ────────────
         prev_backoff = self._url_blocked.get(item_id, 0)
-        product = await self._try_terra_firma(item_id, url, session)
+        product = await self._try_terra_firma(item_id, url, session, cookies)
 
         # terra-firma was blocked → backoff already set, HTML will also fail
         if product is None and self._url_blocked.get(item_id, 0) > prev_backoff:
@@ -156,7 +157,8 @@ class WalmartMonitor(BaseMonitor):
             headers = base_headers(ua, referer="https://www.walmart.com/")
 
             try:
-                resp = await session.get(url, headers=headers, timeout=20, allow_redirects=True)
+                resp = await session.get(url, headers=headers, cookies=cookies or {},
+                                         timeout=20, allow_redirects=True)
             except Exception as exc:
                 log.debug("[Walmart] Request error %s: %s", item_id, exc)
                 self._url_blocked[item_id] = time.time() + (BOT_BACKOFF // 2)

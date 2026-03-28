@@ -53,13 +53,20 @@ class BestBuyMonitor(BaseMonitor):
         stock  = await load(_STOCK)
         notify = await load(_NOTIFY)
 
+        deals_found    = 0
+        restocks_found = 0
+        checked        = 0
+
         # Best Buy priceBlocks API accepts up to ~50 SKUs at once
         batch_size = 40
         session = make_session("chrome120")
         try:
             for i in range(0, len(skus), batch_size):
                 batch = skus[i:i + batch_size]
-                await self._check_batch(batch, url_map, session, prices, stock, notify)
+                d, r, c = await self._check_batch(batch, url_map, session, prices, stock, notify)
+                deals_found    += d
+                restocks_found += r
+                checked        += c
                 if i + batch_size < len(skus):
                     await asyncio.sleep(random.uniform(1.5, 3.5))
         finally:
@@ -68,8 +75,11 @@ class BestBuyMonitor(BaseMonitor):
         await save(_PRICES, prices)
         await save(_STOCK,  stock)
         await save(_NOTIFY, notify)
+        log.info("[BestBuy] Cycle complete — %d/%d SKUs active | %d deals | %d restocks",
+                 checked, len(skus), deals_found, restocks_found)
 
-    async def _check_batch(self, skus, url_map, session, prices, stock, notify) -> None:
+    async def _check_batch(self, skus, url_map, session, prices, stock, notify) -> tuple[int, int, int]:
+        """Returns (deals_found, restocks_found, items_checked)."""
         api_url = "https://www.bestbuy.com/api/3.0/priceBlocks?skus=" + ",".join(skus)
         ua = random_ua()
         headers = base_headers(ua, referer="https://www.bestbuy.com/")
@@ -86,21 +96,23 @@ class BestBuyMonitor(BaseMonitor):
         except Exception as exc:
             log.debug("[BestBuy] Request error: %s", exc)
             self._blocked_until = time.time() + BOT_BACKOFF
-            return
+            return 0, 0, 0
 
         if resp.status_code == 429:
             log.warning("[BestBuy] Rate-limited — backing off %ds", BOT_BACKOFF)
             self._blocked_until = time.time() + BOT_BACKOFF
-            return
+            return 0, 0, 0
 
         if resp.status_code != 200:
-            log.debug("[BestBuy] HTTP %d for batch", resp.status_code)
-            return
+            log.warning("[BestBuy] HTTP %d for batch — API may be blocked or down", resp.status_code)
+            return 0, 0, 0
 
         try:
             data = resp.json()
         except Exception:
-            return
+            return 0, 0, 0
+
+        deals_found = restocks_found = checked = 0
 
         for item in data:
             sku = str(item.get("sku", ""))
@@ -115,9 +127,13 @@ class BestBuyMonitor(BaseMonitor):
             if not current:
                 continue
 
+            checked  += 1
             in_stock  = bool(purchasable)
             price_str = f"${current:.2f}"
             reg_str   = f"${reg_price:.2f}" if reg_price else "N/A"
+
+            log.debug("[BestBuy] %s | %s | reg=%s | in_stock=%s",
+                      name[:40], price_str, reg_str, in_stock)
 
             # ── Restock ───────────────────────────────────────────────────────
             prev_in_stock = stock.get(sku, {}).get("in_stock", True)
@@ -130,6 +146,7 @@ class BestBuyMonitor(BaseMonitor):
                     extra_fields=[{"name": "🔑 SKU", "value": sku, "inline": True}],
                 )
                 notify[f"restock_{sku}"] = time.time()
+                restocks_found += 1
 
             stock[sku] = {
                 "in_stock":  in_stock,
@@ -157,5 +174,8 @@ class BestBuyMonitor(BaseMonitor):
                     extra_fields=[{"name": "🔑 SKU", "value": sku, "inline": True}],
                 )
                 notify[cooldown_key] = time.time()
+                deals_found += 1
 
             prices[sku] = current
+
+        return deals_found, restocks_found, checked

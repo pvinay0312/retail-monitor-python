@@ -22,6 +22,7 @@ from config.settings import FOOTSITES_WEBHOOK_URL, FOOTSITES_INTERVAL
 from monitors.base import BaseMonitor
 from utils.anti_bot import make_session, base_headers, random_ua
 from utils.discord_client import send_restock_alert
+from utils.playwright_session import get_site_cookies, invalidate as invalidate_cookies
 from utils.storage import load, save
 
 log = logging.getLogger(__name__)
@@ -52,19 +53,16 @@ class FootsitesMonitor(BaseMonitor):
     async def check(self) -> None:
         stock  = await load(_STOCK)
         notify = await load(_NOTIFY)
+
+        # ── Kasada cookie extraction via Playwright ────────────────────────────
+        # Kasada runs a JavaScript challenge on the homepage that sets cookies
+        # (kpsdk-sc, kpsdk-ct, kpsdk-v, etc.).  Subsequent API calls must carry
+        # these cookies or they get a 403.  We use a headless browser with stealth
+        # patches to solve the challenge once every 25 minutes and cache the result.
+        fl_cookies = await get_site_cookies("https://www.footlocker.com/")
+
         session = make_session("chrome120")
         try:
-            # Session warmup — visit the homepage to pick up session + Kasada cookies.
-            # Without a warmup the very first API request comes from a "cold" session
-            # which is easier for Kasada to flag as bot traffic.
-            try:
-                warmup_ua = random_ua()
-                warmup_h  = base_headers(warmup_ua, referer="https://www.google.com/")
-                await session.get("https://www.footlocker.com/", headers=warmup_h, timeout=15)
-                await asyncio.sleep(random.uniform(2.0, 4.0))
-            except Exception:
-                pass  # warmup failure is non-fatal
-
             for url in FOOTSITES_PRODUCTS:
                 sku = _sku(url)
                 if not sku:
@@ -74,7 +72,7 @@ class FootsitesMonitor(BaseMonitor):
                     mins = (blocked_until - time.time()) / 60
                     log.debug("[Footsites] SKU %s in backoff — %.0fm remaining", sku, mins)
                     continue
-                await self._check_product(url, sku, session, stock, notify)
+                await self._check_product(url, sku, session, stock, notify, fl_cookies)
                 await asyncio.sleep(random.uniform(1.5, 3.0))
         finally:
             await session.close()
@@ -82,13 +80,14 @@ class FootsitesMonitor(BaseMonitor):
         await save(_STOCK,  stock)
         await save(_NOTIFY, notify)
 
-    async def _check_product(self, url: str, sku: str, session, stock: dict, notify: dict) -> None:
+    async def _check_product(self, url: str, sku: str, session, stock: dict, notify: dict,
+                             cookies: dict | None = None) -> None:
         domain  = _domain(url)
         api_url = f"{_API.get(domain, _API['footlocker.com'])}/{sku}"
         headers = _api_headers(url, sku)
 
         try:
-            resp = await session.get(api_url, headers=headers, timeout=15)
+            resp = await session.get(api_url, headers=headers, cookies=cookies or {}, timeout=15)
         except Exception as exc:
             log.debug("[Footsites] Request error %s: %s", sku, exc)
             return
@@ -96,6 +95,8 @@ class FootsitesMonitor(BaseMonitor):
         if resp.status_code in (403, 429):
             log.warning("[Footsites] Bot-blocked (%d) on %s — backing off %ds", resp.status_code, sku, BOT_BACKOFF)
             self._sku_blocked[sku] = time.time() + BOT_BACKOFF
+            # Invalidate cached cookies so next cycle fetches a fresh challenge solution
+            invalidate_cookies("https://www.footlocker.com/")
             return
         if resp.status_code == 404:
             log.debug("[Footsites] %s → 404, skipping", sku)
