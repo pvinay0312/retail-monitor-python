@@ -389,23 +389,32 @@ def _is_live(launch_status: str, pi: dict, props: dict) -> bool:
 
 def _is_upcoming(launch_status: str, pi: dict, props: dict) -> bool:
     """
-    Returns True if the product is upcoming but not yet live.
-    ACTIVE + future drop date = upcoming draw (entry window open).
+    Returns True if the product has a confirmed FUTURE drop date.
+    Requires a future drop timestamp — this prevents spamming past drops that
+    remain in the feed as INACTIVE after their release window has closed.
     """
     if _is_live(launch_status, pi, props):
         return False
     if launch_status == "ACTIVE":
-        # ACTIVE + future date handled above in _is_live; reaching here means it's live
         return False
-    if launch_status in UPCOMING_STATUSES:
-        return True
-    # If status is unknown but a future drop date exists, treat as upcoming
+
     drop_ts = _extract_drop_timestamp(pi, props)
-    if drop_ts and drop_ts > time.time():
+    now = time.time()
+
+    if launch_status in UPCOMING_STATUSES:
+        # Only notify if drop date is in the future (past drops remain INACTIVE in feed)
+        if drop_ts and drop_ts > now:
+            return True
+        # COMING_SOON / SCHEDULED / EXCLUSIVE_ACCESS without a date are genuinely upcoming
+        if launch_status in {"COMING_SOON", "SCHEDULED", "EXCLUSIVE_ACCESS"}:
+            return True
+        # INACTIVE/HOLD with no future date = old drop, skip
+        return False
+
+    # Unknown status but confirmed future date
+    if drop_ts and drop_ts > now:
         return True
-    # If the product exists in the API but has no clear live status, treat as upcoming
-    if launch_status and launch_status not in AVAILABLE_STATUSES:
-        return True
+
     return False
 
 
