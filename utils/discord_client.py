@@ -13,6 +13,24 @@ from config.settings import COOK_GROUP_NAME, COOK_GROUP_ICON_URL
 
 log = logging.getLogger(__name__)
 
+# ── Startup grace period ──────────────────────────────────────────────────────
+# Every Railway redeploy wipes the data/ directory, resetting all notification
+# cooldowns to zero.  Without a grace window, the first monitor cycle after
+# every deploy floods Discord with ~30-50 re-alerts for items already seen.
+#
+# Solution: suppress all outgoing Discord calls for the first 10 minutes after
+# process start.  Monitors still run normally and write their cooldown state to
+# data/ — so by the time the grace period ends, every previously-seen item has
+# a fresh cooldown timestamp and won't re-alert until its full cooldown expires.
+_STARTUP_TIME          = time.time()
+_STARTUP_GRACE_SECONDS = 600          # 10 minutes
+_grace_logged          = False        # log the message once, not per-call
+
+
+def _in_startup_grace() -> bool:
+    return (time.time() - _STARTUP_TIME) < _STARTUP_GRACE_SECONDS
+
+
 # Colours for each store
 STORE_COLOURS = {
     "amazon":   0xFF9900,
@@ -48,6 +66,22 @@ async def send_embed(
     if not webhook_url:
         log.warning("No webhook URL configured for %s — skipping alert.", store)
         return False
+
+    # Startup grace: suppress Discord POSTs for 10 min after deploy so that
+    # cooldown files can be rebuilt without flooding every channel.
+    # Return True so callers still update their notify.json timestamps.
+    global _grace_logged
+    if _in_startup_grace():
+        remaining = int(_STARTUP_GRACE_SECONDS - (time.time() - _STARTUP_TIME))
+        if not _grace_logged:
+            log.info(
+                "[Discord] Startup grace period active (%ds) — "
+                "suppressing alerts until cooldown state is rebuilt after deploy.",
+                _STARTUP_GRACE_SECONDS,
+            )
+            _grace_logged = True
+        log.debug("[Discord] Grace suppressed: %s (%ds remaining)", title[:60], remaining)
+        return True  # pretend success so notify.json timestamps are written
 
     colour = colour if colour is not None else STORE_COLOURS.get(store, 0x5865F2)
 

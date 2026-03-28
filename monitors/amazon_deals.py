@@ -119,6 +119,15 @@ def _parse_deals(html: str) -> list[dict]:
         if not asin:
             continue
 
+        # Skip expired / sold-out / unavailable deals — they stay on the page
+        # after ending and would trigger false alerts when users click the link
+        card_text = card.get_text(" ", strip=True).lower()
+        if any(s in card_text for s in (
+            "deal ended", "sold out", "no longer available",
+            "expired", "out of stock", "deal is no longer",
+        )):
+            continue
+
         # Title
         title_tag = card.find(class_=re.compile(r"title|name|truncate", re.I))
         title = title_tag.get_text(strip=True)[:200] if title_tag else ""
