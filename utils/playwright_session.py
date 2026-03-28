@@ -121,6 +121,23 @@ async def _fetch_via_playwright(url: str) -> dict[str, str]:
                 # They typically finish within 2-3 seconds; wait a bit extra.
                 await asyncio.sleep(5)
 
+                # Check if we got blocked even inside Playwright
+                page_title = (await page.title()).lower()
+                block_signals = ("access denied", "blocked", "robot", "captcha",
+                                 "error", "403", "412", "unusual traffic")
+                if any(s in page_title for s in block_signals):
+                    log.warning(
+                        "[CookieManager] *** IP-LEVEL BLOCK DETECTED *** "
+                        "Playwright page title: '%s' — Railway's datacenter IP is "
+                        "hard-blocked by %s's bot protection. Cookies will not help. "
+                        "Solution: run this bot on a non-datacenter IP "
+                        "(home machine, Hetzner VPS, or similar).",
+                        await page.title(), urlparse(url).netloc,
+                    )
+                    await context.close()
+                    await browser.close()
+                    return {}
+
                 raw = await context.cookies()
                 cookies = {c["name"]: c["value"] for c in raw}
                 log.debug("[CookieManager] Extracted %d cookies from %s", len(cookies), url)
@@ -130,8 +147,12 @@ async def _fetch_via_playwright(url: str) -> dict[str, str]:
                 akamai_keys = [k for k in cookies if "ak_bmsc" in k.lower() or "bm_sz" in k.lower()]
                 if kasada_keys:
                     log.info("[CookieManager] Kasada cookies obtained: %s", kasada_keys)
+                elif "footlocker" in url or "champssports" in url:
+                    log.warning("[CookieManager] No Kasada cookies from %s — challenge failed or IP blocked", url)
                 if akamai_keys:
                     log.info("[CookieManager] Akamai cookies obtained: %s", akamai_keys)
+                elif "walmart" in url:
+                    log.warning("[CookieManager] No Akamai cookies from %s — challenge failed or IP blocked", url)
 
             except Exception as exc:
                 log.warning("[CookieManager] Navigation failed for %s: %s", url, exc)
