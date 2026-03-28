@@ -142,13 +142,19 @@ class NikeSnkrsMonitor(BaseMonitor):
                     or launch_view.get("status", "")
                     or ""
                 ).upper()
-                price    = pi.get("merchPrice", {}).get("currentRetail", 0)
+                mp       = pi.get("merchPrice", {})
+                price    = mp.get("currentPrice") or mp.get("currentRetail") or mp.get("fullPrice") or 0
                 skus     = pi.get("skus") or pi.get("availableSkus") or []
                 sizes    = _extract_sizes(skus)
-                image    = _extract_image(pi)
+                image    = _extract_image(pi, props)
                 key      = style or product_id
                 price_str = f"${price:.0f}" if price else "N/A"
-                product_url = f"https://www.nike.com/launch/t/{style.lower()}" if style else "https://www.nike.com/launch"
+                seo_slug  = props.get("seo", {}).get("slug", "")
+                product_url = (
+                    f"https://www.nike.com/launch/t/{seo_slug}" if seo_slug
+                    else f"https://www.nike.com/launch/t/{style.lower()}" if style
+                    else "https://www.nike.com/launch"
+                )
 
                 # Auto-save newly discovered style codes
                 if style and style not in auto_styles:
@@ -231,17 +237,22 @@ class NikeSnkrsMonitor(BaseMonitor):
                     or pi.get("merchProduct", {}).get("status", "")
                     or ""
                 ).upper()
-                price    = pi.get("merchPrice", {}).get("currentRetail", 0)
+                mp       = pi.get("merchPrice", {})
+                price    = mp.get("currentPrice") or mp.get("currentRetail") or mp.get("fullPrice") or 0
                 skus     = pi.get("skus") or pi.get("availableSkus") or []
                 sizes    = _extract_sizes(skus)
-                image    = _extract_image(pi)
+                image    = _extract_image(pi, props)
                 title    = (
                     pi.get("productContent", {}).get("fullTitle")
                     or props.get("title")
                     or style_code
                 )
-                price_str   = f"${price:.0f}" if price else "N/A"
-                product_url = f"https://www.nike.com/launch/t/{style_code.lower()}"
+                price_str = f"${price:.0f}" if price else "N/A"
+                seo_slug  = props.get("seo", {}).get("slug", "")
+                product_url = (
+                    f"https://www.nike.com/launch/t/{seo_slug}" if seo_slug
+                    else f"https://www.nike.com/launch/t/{style_code.lower()}"
+                )
 
                 on_cool = (time.time() - notify.get(style_code, 0)) < NOTIFY_COOLDOWN
 
@@ -340,7 +351,17 @@ def _size_sort_key(s: str) -> float:
     return float(m.group()) if m else 99
 
 
-def _extract_image(pi: dict) -> str:
+def _extract_image(pi: dict, props: dict = None) -> str:
+    # Best source: coverCard image from publishedContent.properties (obj-level, not pi-level)
+    if props:
+        try:
+            card = props.get("coverCard", {}).get("properties", {})
+            img = card.get("squarishURL") or card.get("portraitURL") or card.get("landscapeURL") or ""
+            if img:
+                return img
+        except Exception:
+            pass
+    # Fallback: colorwayImages on productContent (often empty)
     try:
         content = pi.get("productContent", {})
         imgs = content.get("colorwayImages", {})
