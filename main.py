@@ -26,11 +26,12 @@ from monitors.footsites      import FootsitesMonitor
 # ── Logging ───────────────────────────────────────────────────────────────────
 
 def _setup_logging() -> None:
-    handler = logging.StreamHandler()
-    # Disable ANSI colors on Railway — the log ingester misreads escape codes
-    # and incorrectly tags all messages as severity="error".
+    # On Railway: write to stdout so the log ingester correctly classifies severity.
+    # stderr output is always tagged as error by Railway regardless of content.
     on_railway = bool(os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_SERVICE_ID"))
     if on_railway:
+        import sys
+        handler = logging.StreamHandler(sys.stdout)
         handler.setFormatter(logging.Formatter(
             "%(asctime)s [%(levelname)s] %(message)s",
             datefmt="%Y-%m-%d %H:%M:%S",
