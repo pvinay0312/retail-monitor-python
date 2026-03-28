@@ -19,6 +19,7 @@ from config.products import AMAZON_PRODUCTS
 from config.settings import AMAZON_WEBHOOK_URL, AMAZON_INTERVAL
 from monitors.base import BaseMonitor
 from utils.anti_bot import make_session, base_headers, random_ua
+from utils.affiliate import make_affiliate_url
 from utils.discord_client import send_deal_alert, send_restock_alert
 from utils.storage import load, save, is_on_cooldown, mark_notified
 
@@ -122,7 +123,7 @@ class AmazonMonitor(BaseMonitor):
                 AMAZON_WEBHOOK_URL,
                 store="amazon",
                 name=name,
-                url=url,
+                url=make_affiliate_url(url),
                 price=price_str,
                 image=image,
                 extra_fields=[{"name": "🔑 ASIN", "value": asin, "inline": True}],
@@ -178,7 +179,7 @@ class AmazonMonitor(BaseMonitor):
                 AMAZON_WEBHOOK_URL,
                 store="amazon",
                 name=name,
-                url=url,
+                url=make_affiliate_url(url),
                 price=eff_str,
                 original_price=was_str,
                 discount_pct=pct_str or "N/A",

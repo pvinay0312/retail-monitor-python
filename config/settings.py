@@ -19,6 +19,16 @@ UPCOMING_DROPS_WEBHOOK_URL = os.getenv(
 COOK_GROUP_NAME     = os.getenv("COOK_GROUP_NAME", "Deal Monitor")
 COOK_GROUP_ICON_URL = os.getenv("COOK_GROUP_ICON_URL", "")
 
+# ── Affiliate ─────────────────────────────────────────────────────────────────
+# Set this in Railway variables to earn Amazon Associates commissions.
+# Example: AMAZON_AFFILIATE_TAG=solealerts-20
+AMAZON_AFFILIATE_TAG = os.getenv("AMAZON_AFFILIATE_TAG", "")
+
+# ── Deal scoring ──────────────────────────────────────────────────────────────
+# Minimum score (0-100) required before posting a deal alert.
+# Raise this to post fewer but better deals. Lower to post more.
+DEAL_MIN_SCORE = int(os.getenv("DEAL_MIN_SCORE", "40"))
+
 # ── Browser ───────────────────────────────────────────────────────────────────
 CHROMIUM_PATH = os.getenv("CHROMIUM_PATH", "")   # leave blank for Playwright default
 

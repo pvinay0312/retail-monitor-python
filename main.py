@@ -13,12 +13,14 @@ import sys
 
 import colorlog
 
-from monitors.amazon    import AmazonMonitor
-from monitors.bestbuy   import BestBuyMonitor
-from monitors.walmart   import WalmartMonitor
-from monitors.target    import TargetMonitor
-from monitors.nike_snkrs import NikeSnkrsMonitor
-from monitors.footsites  import FootsitesMonitor
+from monitors.amazon         import AmazonMonitor
+from monitors.amazon_coupons import AmazonCouponsMonitor
+from monitors.amazon_deals   import AmazonDealsMonitor
+from monitors.bestbuy        import BestBuyMonitor
+from monitors.walmart        import WalmartMonitor
+from monitors.target         import TargetMonitor
+from monitors.nike_snkrs     import NikeSnkrsMonitor
+from monitors.footsites      import FootsitesMonitor
 
 
 # ── Logging ───────────────────────────────────────────────────────────────────
@@ -69,6 +71,8 @@ async def _main() -> None:
 
     monitors = [
         AmazonMonitor(),
+        AmazonCouponsMonitor(),   # auto-scans amazon.com/coupons hub
+        AmazonDealsMonitor(),     # auto-scans amazon.com/deals page
         BestBuyMonitor(),
         WalmartMonitor(),
         TargetMonitor(),
