@@ -1,109 +1,132 @@
 """
-Footsites monitor — Foot Locker, Kids Foot Locker, Champs Sports.
+Footsites monitor — Foot Locker, Champs Sports, Kids Foot Locker.
 
-These sites use Kasada bot protection, which injects JS challenges that inspect:
-  - navigator.webdriver flag
-  - Chrome plugin / mimeType lists
-  - WebGL fingerprint
-  - CDP (DevTools Protocol) presence
+APPROACH: Direct JSON API calls via curl_cffi instead of Playwright.
+Kasada only protects browser page loads with a JS challenge.
+The backend product API at /api/products/pdp/{SKU} is server-side and
+returns plain JSON without any JS challenge — curl_cffi Chrome TLS
+impersonation is sufficient to access it.
 
-We use Playwright with playwright-stealth to patch all of these at the browser level.
+API endpoint:  https://www.{domain}/api/products/pdp/{SKU}
+SKU extracted from product URL:  .../product/{name}/{SKU}.html
 """
 import asyncio
-import json
 import logging
+import random
 import re
 import time
-
-from playwright.async_api import async_playwright, Page, Browser, BrowserContext, TimeoutError as PWTimeout
+import uuid
 
 from config.products import FOOTSITES_PRODUCTS
-from config.settings import FOOTSITES_WEBHOOK_URL, FOOTSITES_INTERVAL, CHROMIUM_PATH
+from config.settings import FOOTSITES_WEBHOOK_URL, FOOTSITES_INTERVAL
 from monitors.base import BaseMonitor
+from utils.anti_bot import make_session, base_headers, random_ua
 from utils.discord_client import send_restock_alert
 from utils.storage import load, save
 
 log = logging.getLogger(__name__)
 
-NOTIFY_COOLDOWN = 3600   # 1 hour per product
+NOTIFY_COOLDOWN = 3600   # 1 hour per SKU
+BOT_BACKOFF     = 900    # 15 min per SKU on 403/429
+_STOCK          = "fl_stock.json"
+_NOTIFY         = "fl_notify.json"
 
-_STOCK  = "fl_stock.json"
-_NOTIFY = "fl_notify.json"
+AVAILABLE_STATUSES = {"IN_STOCK", "AVAILABLE", "PURCHASABLE", "ACTIVE", "STOCKED"}
 
-AVAILABLE_STATUSES = {"IN_STOCK", "AVAILABLE", "PURCHASABLE"}
-
-# Headers that mimic a real Chrome request on Windows
-EXTRA_HEADERS = {
-    "Accept-Language": "en-US,en;q=0.9",
-    "Accept-Encoding": "gzip, deflate, br",
-    "Cache-Control":   "no-cache",
-    "Pragma":          "no-cache",
-    "sec-ch-ua":       '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
-    "sec-ch-ua-mobile": "?0",
-    "sec-ch-ua-platform": '"Windows"',
-    "Sec-Fetch-Dest":  "document",
-    "Sec-Fetch-Mode":  "navigate",
-    "Sec-Fetch-Site":  "cross-site",
-    "Sec-Fetch-User":  "?1",
-    "Upgrade-Insecure-Requests": "1",
+# Domain → API base URL
+_API = {
+    "footlocker.com":     "https://www.footlocker.com/api/products/pdp",
+    "champssports.com":   "https://www.champssports.com/api/products/pdp",
+    "kidsfootlocker.com": "https://www.kidsfootlocker.com/api/products/pdp",
 }
 
 
 class FootsitesMonitor(BaseMonitor):
-    name = "Footsites"
+    name     = "Footsites"
     interval = FOOTSITES_INTERVAL
 
+    def __init__(self):
+        super().__init__()
+        self._sku_blocked: dict[str, float] = {}
+
     async def check(self) -> None:
-        # ── DISABLED: Kasada bot protection causes 100% Playwright timeouts ───
-        # Foot Locker and Champs Sports both use Kasada, which detects headless
-        # Chromium even with playwright-stealth applied. Every page.goto() and
-        # page.content() call times out at 30–45 s with zero successful parses.
-        # Re-enable once a bypass is available (e.g. residential proxies with
-        # real browser fingerprints, or a dedicated Kasada solver service).
-        log.warning(
-            "[Footsites] Monitor disabled — Kasada bot protection blocks all "
-            "Playwright requests (100%% timeout rate). Skipping this cycle."
-        )
-        return
+        stock  = await load(_STOCK)
+        notify = await load(_NOTIFY)
+        session = make_session("chrome120")
+        try:
+            for url in FOOTSITES_PRODUCTS:
+                sku = _sku(url)
+                if not sku:
+                    continue
+                blocked_until = self._sku_blocked.get(sku, 0)
+                if time.time() < blocked_until:
+                    mins = (blocked_until - time.time()) / 60
+                    log.debug("[Footsites] SKU %s in backoff — %.0fm remaining", sku, mins)
+                    continue
+                await self._check_product(url, sku, session, stock, notify)
+                await asyncio.sleep(random.uniform(1.5, 3.0))
+        finally:
+            await session.close()
 
-    async def _check_product(self, url: str, page: Page, stock: dict, notify: dict) -> None:
-        sku = _sku(url)
+        await save(_STOCK,  stock)
+        await save(_NOTIFY, notify)
 
-        # Block images, fonts and media to speed up load while keeping scripts
-        await page.route("**/*", _block_unnecessary)
-        await page.set_extra_http_headers(EXTRA_HEADERS)
+    async def _check_product(self, url: str, sku: str, session, stock: dict, notify: dict) -> None:
+        domain  = _domain(url)
+        api_url = f"{_API.get(domain, _API['footlocker.com'])}/{sku}"
+        headers = _api_headers(url, sku)
 
-        html = await _fetch_page(page, url)
-        if not html:
+        try:
+            resp = await session.get(api_url, headers=headers, timeout=15)
+        except Exception as exc:
+            log.debug("[Footsites] Request error %s: %s", sku, exc)
             return
 
-        product = _parse_next_data(html)
+        if resp.status_code in (403, 429):
+            log.warning("[Footsites] Bot-blocked on %s — backing off 15 min", sku)
+            self._sku_blocked[sku] = time.time() + BOT_BACKOFF
+            return
+        if resp.status_code == 404:
+            log.debug("[Footsites] %s → 404, skipping", sku)
+            return
+        if resp.status_code != 200:
+            log.debug("[Footsites] %s → HTTP %d", sku, resp.status_code)
+            return
+
+        try:
+            data = resp.json()
+        except Exception:
+            log.debug("[Footsites] JSON parse error for %s", sku)
+            return
+
+        product = _parse_api(data)
         if not product:
-            log.debug("[Footsites] No product data for %s", sku)
             return
 
-        name     = product.get("name", "Unknown")[:200]
-        in_stock = product.get("in_stock", False)
-        price    = product.get("price")
-        image    = product.get("image", "")
-        sizes    = product.get("sizes", [])
+        name      = product["name"]
+        price     = product["price"]
+        in_stock  = product["in_stock"]
+        sizes     = product["sizes"]
+        image     = product["image"]
+        price_str = f"${price:.2f}" if price else "N/A"
 
-        if price is None:
-            return
-
-        price_str = f"${price:.2f}"
-
-        # ── Restock detection ─────────────────────────────────────────────────
         prev_in_stock = stock.get(sku, {}).get("in_stock", True)
         prev_oos_cnt  = stock.get(sku, {}).get("oos_count", 0)
+
+        log.info("[Footsites] %s | %s | in_stock=%s | sizes=%d",
+                 sku, name[:50], in_stock, len(sizes))
 
         if in_stock and not prev_in_stock and prev_oos_cnt >= 1:
             on_cool = (time.time() - notify.get(sku, 0)) < NOTIFY_COOLDOWN
             if not on_cool:
-                log.info("[Footsites] RESTOCK: %s | %s", name, sku)
-                fields = [{"name": "🔑 SKU",    "value": sku,          "inline": True}]
+                log.info("[Footsites] RESTOCK: %s | %s", sku, name)
+                fields = [{"name": "🔑 SKU", "value": sku, "inline": True}]
                 if sizes:
-                    fields.append({"name": "📐 Sizes", "value": ", ".join(sizes[:20]), "inline": False})
+                    fields.append({
+                        "name":   f"📐 Available Sizes ({len(sizes)})",
+                        "value":  ", ".join(sizes[:25]),
+                        "inline": False,
+                    })
                 await send_restock_alert(
                     FOOTSITES_WEBHOOK_URL, store="footsites",
                     name=name, url=url, price=price_str, image=image,
@@ -117,157 +140,121 @@ class FootsitesMonitor(BaseMonitor):
         }
 
 
-# ── Browser helpers ───────────────────────────────────────────────────────────
-
-async def _launch_browser(pw) -> Browser:
-    launch_args = [
-        "--no-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu",
-        "--no-zygote",
-        "--disable-blink-features=AutomationControlled",
-        "--disable-features=IsolateOrigins,site-per-process",
-    ]
-    executable = CHROMIUM_PATH or None
-    return await pw.chromium.launch(
-        headless=True,
-        args=launch_args,
-        executable_path=executable or None,
-    )
-
-
-async def _new_context(browser: Browser) -> BrowserContext:
-    return await browser.new_context(
-        user_agent=(
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/124.0.0.0 Safari/537.36"
-        ),
-        viewport={"width": 1366, "height": 768},
-        locale="en-US",
-        timezone_id="America/New_York",
-        java_script_enabled=True,
-        ignore_https_errors=False,
-        extra_http_headers=EXTRA_HEADERS,
-    )
-
-
-async def _apply_stealth(page: Page) -> None:
-    """Patch JS properties that Kasada checks to detect headless browsers."""
-    try:
-        from playwright_stealth import stealth_async
-        await stealth_async(page)
-    except ImportError:
-        # Manual stealth if playwright-stealth is unavailable
-        await page.add_init_script("""
-            Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
-            Object.defineProperty(navigator, 'plugins', {get: () => [1,2,3,4,5]});
-            Object.defineProperty(navigator, 'languages', {get: () => ['en-US', 'en']});
-            window.chrome = {runtime: {}};
-        """)
-
-
-async def _fetch_page(page: Page, url: str) -> str | None:
-    """Navigate to url and return page HTML, or None on failure."""
-    try:
-        await page.goto(url, wait_until="domcontentloaded", timeout=45_000)
-        await asyncio.sleep(4)   # let Kasada JS complete
-        # Race content extraction against a 30s wall
-        content_task = asyncio.ensure_future(page.content())
-        await asyncio.wait_for(content_task, timeout=30)
-        return content_task.result()
-    except (PWTimeout, asyncio.TimeoutError):
-        log.debug("[Footsites] Page timeout for %s", url)
-    except Exception as exc:
-        log.debug("[Footsites] Page error %s: %s", url, exc)
-    return None
-
-
-async def _block_unnecessary(route):
-    """Block images, fonts, and media to speed up page loads."""
-    if route.request.resource_type in ("image", "media", "font", "stylesheet"):
-        await route.abort()
-    else:
-        await route.continue_()
-
-
-# ── Data extraction ───────────────────────────────────────────────────────────
+# ── Helpers ────────────────────────────────────────────────────────────────────
 
 def _sku(url: str) -> str:
-    m = re.search(r"/([A-Z0-9]+)\.html", url, re.I)
-    return m.group(1).upper() if m else url
+    """Extract SKU from Foot Locker product URL: .../product/{name}/{SKU}.html"""
+    m = re.search(r"/([A-Za-z0-9]+)\.html$", url)
+    return m.group(1).upper() if m else ""
 
 
-def _parse_next_data(html: str) -> dict | None:
-    m = re.search(r'<script[^>]+id="__NEXT_DATA__"[^>]*>(.*?)</script>', html, re.S)
-    if not m:
+def _domain(url: str) -> str:
+    m = re.search(r"https?://(?:www\.)?([^/]+)", url)
+    return m.group(1) if m else "footlocker.com"
+
+
+def _api_headers(product_url: str, sku: str) -> dict:
+    """Build headers that mimic a real XHR from the product page."""
+    ua = random_ua()
+    h  = base_headers(ua, referer=product_url)
+    h.update({
+        "Accept":             "application/json, text/plain, */*",
+        "x-fl-request-id":    str(uuid.uuid4()),
+        "Sec-Fetch-Dest":     "empty",
+        "Sec-Fetch-Mode":     "cors",
+        "Sec-Fetch-Site":     "same-origin",
+        "X-Requested-With":   "XMLHttpRequest",
+    })
+    return h
+
+
+def _parse_api(data: dict) -> dict | None:
+    """Parse Foot Locker /api/products/pdp JSON into a normalised product dict."""
+    if not isinstance(data, dict):
         return None
-    try:
-        raw = json.loads(m.group(1))
-    except json.JSONDecodeError:
+
+    # Name
+    name = (data.get("name") or data.get("productName") or "")[:200]
+    if not name:
         return None
 
-    # Navigate Foot Locker / Champs __NEXT_DATA__ structure
+    # Price — try several field names FL has used
+    price_raw = (
+        data.get("currentPrice") or
+        data.get("salePrice") or
+        data.get("regularPrice") or
+        data.get("price")
+    )
+    price: float | None = None
     try:
-        product_node = _dig(raw, "props", "pageProps", "initialData", "data", "product")
-        if not product_node:
-            product_node = _deep_find_product(raw)
-        if not product_node:
-            return None
+        price = float(price_raw) if price_raw else None
+    except (ValueError, TypeError):
+        pass
 
-        name      = product_node.get("name", "")
-        price_raw = product_node.get("currentPrice") or product_node.get("price")
-        price     = float(price_raw) if price_raw else None
+    # Variants / SKUs — FL uses "variants", "skus", or "productVariants"
+    variants = (
+        data.get("variants") or
+        data.get("skus") or
+        data.get("productVariants") or
+        []
+    )
 
-        # Availability from variants / skus
-        variants = (product_node.get("skus") or product_node.get("variants")
-                    or product_node.get("productVariants", []))
-        in_stock  = False
-        sizes     = []
-        for v in variants:
-            avail = (v.get("availabilityStatus") or v.get("availability") or "").upper()
-            size  = v.get("size") or v.get("localizedSize") or ""
-            if avail in AVAILABLE_STATUSES:
+    in_stock = False
+    sizes: list[str] = []
+    for v in variants:
+        if not isinstance(v, dict):
+            continue
+        avail = (
+            v.get("availabilityStatus") or
+            v.get("availability") or
+            v.get("stockStatus") or
+            ""
+        ).upper()
+        # Size can live at top level or nested under "attributes"
+        attrs = v.get("attributes") or {}
+        size  = (
+            v.get("size") or
+            v.get("localizedSize") or
+            attrs.get("size") or
+            ""
+        )
+        oos = {"OUT_OF_STOCK", "UNAVAILABLE", "NOT_AVAILABLE", "SOLD_OUT"}
+        if avail not in oos and (avail in AVAILABLE_STATUSES or avail == ""):
+            if size:
                 in_stock = True
-                if size:
-                    sizes.append(size)
+                sizes.append(str(size))
+        # Also flag in_stock if any variant is explicitly available
+        if avail in AVAILABLE_STATUSES:
+            in_stock = True
 
-        # Image
-        imgs  = product_node.get("images") or product_node.get("colorways", [{}])[0].get("images", [])
-        image = ""
-        if isinstance(imgs, list) and imgs:
-            image = imgs[0].get("src") or imgs[0].get("url") or ""
-        elif isinstance(imgs, dict):
-            image = imgs.get("src") or imgs.get("url") or ""
+    # Image
+    images = data.get("images") or data.get("colorways") or []
+    image  = ""
+    if isinstance(images, list) and images:
+        first = images[0]
+        if isinstance(first, dict):
+            image = (
+                first.get("src") or
+                first.get("url") or
+                first.get("imageUrl") or
+                first.get("imageId") or
+                ""
+            )
+            # FL sometimes gives just an imageId — build the CDN URL
+            if image and not image.startswith("http"):
+                image = f"https://images.footlocker.com/is/image/FLUS/{image}?wid=500"
+    elif isinstance(images, dict):
+        image = images.get("src") or images.get("url") or ""
 
-        return {"name": name, "price": price, "in_stock": in_stock,
-                "sizes": sizes, "image": image}
-    except Exception:
-        return None
+    # Sort sizes numerically
+    sizes = _sort_sizes(list(set(sizes)))
+
+    return {"name": name, "price": price, "in_stock": in_stock,
+            "sizes": sizes, "image": image}
 
 
-def _dig(obj: dict, *keys):
-    """Safely traverse nested dicts."""
-    for k in keys:
-        if not isinstance(obj, dict):
-            return None
-        obj = obj.get(k)
-    return obj
-
-
-def _deep_find_product(obj, depth: int = 0) -> dict | None:
-    if depth > 10:
-        return None
-    if isinstance(obj, dict):
-        if "name" in obj and ("currentPrice" in obj or "price" in obj):
-            return obj
-        for v in obj.values():
-            r = _deep_find_product(v, depth + 1)
-            if r:
-                return r
-    elif isinstance(obj, list):
-        for item in obj:
-            r = _deep_find_product(item, depth + 1)
-            if r:
-                return r
-    return None
+def _sort_sizes(sizes: list[str]) -> list[str]:
+    def key(s: str) -> float:
+        m = re.search(r"[\d.]+", s)
+        return float(m.group()) if m else 99.0
+    return sorted(sizes, key=key)

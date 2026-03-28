@@ -633,6 +633,9 @@ FOOTSITES_PRODUCTS = [
     "https://www.footlocker.com/product/adidas-originals-gazelle-indoor-mens/JH5405.html",
     "https://www.footlocker.com/product/adidas-originals-forum-low-cl-mens/HQ7474.html",
 
+    # ── User-flagged drops ────────────────────────────────────────────────────
+    "https://www.footlocker.com/product/nike-sneaker/IF4396100.html",   # IF4396-100 drop
+
     # ── Champs Sports — Air Jordan 1 ──────────────────────────────────────────
     "https://www.champssports.com/product/jordan-aj-1-retro-high-og-v3-mens/H4363100.html",
     "https://www.champssports.com/product/jordan-retro-1-high-og-mens/Z5485003.html",
