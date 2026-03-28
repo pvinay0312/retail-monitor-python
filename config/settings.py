@@ -36,8 +36,8 @@ CHROMIUM_PATH = os.getenv("CHROMIUM_PATH", "")   # leave blank for Playwright de
 # Nike/BestBuy are fastest because drops sell out in seconds/minutes.
 # Walmart/Amazon/Target scrape individual pages so stay slower to avoid blocks.
 AMAZON_INTERVAL    = int(os.getenv("AMAZON_INTERVAL",    "240"))   # 4 min
-BESTBUY_INTERVAL   = int(os.getenv("BESTBUY_INTERVAL",    "90"))   # 90s — batch API, safe
-WALMART_INTERVAL   = int(os.getenv("WALMART_INTERVAL",   "180"))   # 3 min
+BESTBUY_INTERVAL   = int(os.getenv("BESTBUY_INTERVAL",    "60"))   # 60s — batch API, low ban risk
+WALMART_INTERVAL   = int(os.getenv("WALMART_INTERVAL",   "180"))   # 3 min — Akamai protection, don't go lower
 TARGET_INTERVAL    = int(os.getenv("TARGET_INTERVAL",    "240"))   # 4 min
-FOOTSITES_INTERVAL = int(os.getenv("FOOTSITES_INTERVAL", "300"))   # 5 min
-NIKE_INTERVAL      = int(os.getenv("NIKE_INTERVAL",       "60"))   # 60s — drops sell out fast
+FOOTSITES_INTERVAL = int(os.getenv("FOOTSITES_INTERVAL", "300"))   # 5 min — heavy Playwright requests
+NIKE_INTERVAL      = int(os.getenv("NIKE_INTERVAL",       "45"))   # 45s — JSON API, drops have 10-30min window
