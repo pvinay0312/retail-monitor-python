@@ -198,6 +198,7 @@ class NikeSnkrsMonitor(BaseMonitor):
             api_url = (
                 f"https://api.nike.com/product_feed/threads/v2"
                 f"?filter=marketplace(US)&filter=language(en)"
+                f"&filter=channelId({SNKRS_CHANNEL_ID})"
                 f"&filter=styleColor({style_code})&count=1"
             )
             try:
@@ -206,6 +207,7 @@ class NikeSnkrsMonitor(BaseMonitor):
                     continue
                 objects = resp.json().get("objects", [])
                 if not objects:
+                    log.warning("[Nike SNKRS] Watchlist %s → 0 objects from API (sold out or bad style code)", style_code)
                     continue
 
                 obj = objects[0]
