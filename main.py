@@ -115,19 +115,21 @@ async def _main() -> None:
         AmazonOutletMonitor(),    # auto-scans amazon.com/outlet/deals (overstock)
         WootMonitor(),            # woot.com daily deals + Woot-Off flash sales
         BestBuyMonitor(),
-        WalmartMonitor(),
+        # WalmartMonitor(),       # disabled — Akamai blocks _abck cookie even from home IP
         TargetMonitor(),
         NikeSnkrsMonitor(),
-        FootsitesMonitor(),
+        # FootsitesMonitor(),     # disabled — Kasada blocks even from home IP
     ]
 
     tasks = [asyncio.create_task(m.run(), name=m.name) for m in monitors]
 
-    # Start health-check server (ignore ImportError if aiohttp isn't installed)
-    try:
-        tasks.append(asyncio.create_task(_health_server()))
-    except Exception:
-        pass
+    # Start health-check server only on Railway (keeps the dyno alive)
+    on_railway = bool(os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_SERVICE_ID"))
+    if on_railway:
+        try:
+            tasks.append(asyncio.create_task(_health_server()))
+        except Exception:
+            pass
 
     log.info("All %d monitors launched.", len(monitors))
     await asyncio.gather(*tasks)

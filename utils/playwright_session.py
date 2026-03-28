@@ -23,6 +23,7 @@ Limitations:
 """
 import asyncio
 import logging
+import os
 import time
 from urllib.parse import urlparse
 
@@ -82,11 +83,17 @@ async def _fetch_via_playwright(url: str) -> dict[str, str]:
     except ImportError:
         log.debug("[CookieManager] playwright-stealth not installed — running without patches")
 
+    # Use headless=False locally so Kasada/Akamai JS challenges pass fingerprint checks.
+    # On Railway (no display) we must stay headless — the challenge will likely fail there
+    # but at least we get partial cookies.
+    on_railway = bool(os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_SERVICE_ID"))
+    headless = on_railway
+
     cookies: dict[str, str] = {}
     try:
         async with async_playwright() as p:
             browser = await p.chromium.launch(
-                headless=True,
+                headless=headless,
                 args=[
                     "--no-sandbox",
                     "--disable-dev-shm-usage",
@@ -118,8 +125,8 @@ async def _fetch_via_playwright(url: str) -> dict[str, str]:
             try:
                 await page.goto(url, timeout=30_000, wait_until="domcontentloaded")
                 # Let Kasada / Akamai challenge JS run to completion.
-                # They typically finish within 2-3 seconds; wait a bit extra.
-                await asyncio.sleep(5)
+                # Akamai sensor typically needs 3-8 seconds; Kasada up to 10.
+                await asyncio.sleep(10)
 
                 # Check if we got blocked even inside Playwright
                 page_title = (await page.title()).lower()
@@ -142,15 +149,18 @@ async def _fetch_via_playwright(url: str) -> dict[str, str]:
                 cookies = {c["name"]: c["value"] for c in raw}
                 log.debug("[CookieManager] Extracted %d cookies from %s", len(cookies), url)
 
-                # Log Kasada-specific cookies so we know the challenge was solved
+                # Log challenge-solved cookies so we know what protection was passed
                 kasada_keys = [k for k in cookies if "kpsdk" in k.lower() or "x-kpsdk" in k.lower()]
-                akamai_keys = [k for k in cookies if "ak_bmsc" in k.lower() or "bm_sz" in k.lower()]
+                akamai_keys = [k for k in cookies if any(s in k.lower() for s in
+                               ("ak_bmsc", "bm_sz", "_abck", "bm_sv", "bm_mi"))]
+                abck = "_abck" in cookies
+                log.info("[CookieManager] All cookies for %s: %s", urlparse(url).netloc, list(cookies.keys()))
                 if kasada_keys:
                     log.info("[CookieManager] Kasada cookies obtained: %s", kasada_keys)
                 elif "footlocker" in url or "champssports" in url:
                     log.warning("[CookieManager] No Kasada cookies from %s — challenge failed or IP blocked", url)
                 if akamai_keys:
-                    log.info("[CookieManager] Akamai cookies obtained: %s", akamai_keys)
+                    log.info("[CookieManager] Akamai cookies obtained (abck=%s): %s", abck, akamai_keys)
                 elif "walmart" in url:
                     log.warning("[CookieManager] No Akamai cookies from %s — challenge failed or IP blocked", url)
 
