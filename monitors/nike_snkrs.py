@@ -32,7 +32,7 @@ from utils.storage import load, save
 
 log = logging.getLogger(__name__)
 
-NOTIFY_COOLDOWN = 30 * 60   # 30 min per product
+NOTIFY_COOLDOWN = 2 * 60    # 2 min — short enough to catch live drops after redeploy
 
 # ACTIVE is intentionally excluded here: Nike uses ACTIVE for both upcoming entry
 # windows (draw open, future drop date) and same-day live drops.
@@ -151,7 +151,7 @@ class NikeSnkrsMonitor(BaseMonitor):
                 on_cool = (time.time() - notify.get(key, 0)) < NOTIFY_COOLDOWN
                 is_live = _is_live(launch_status, pi, props)
 
-                if is_live and not on_cool and not _is_live(prev, {}, {}):
+                if is_live and not on_cool:
                     log.info("[Nike SNKRS] LIVE DROP: %s | %s | %s", title, style, price_str)
                     await send_nike_drop(
                         NIKE_SNKRS_WEBHOOK_URL,
@@ -236,7 +236,7 @@ class NikeSnkrsMonitor(BaseMonitor):
                              style_code, title[:50], launch_status or "UNKNOWN")
 
                     is_live = _is_live(launch_status, pi, props)
-                    if is_live and not on_cool and not _is_live(prev, {}, {}):
+                    if is_live and not on_cool:
                         log.info("[Nike SNKRS] WATCHLIST LIVE: %s | %s", style_code, title)
                         await send_nike_drop(
                             NIKE_SNKRS_WEBHOOK_URL,
