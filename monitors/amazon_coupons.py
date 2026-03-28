@@ -32,20 +32,10 @@ log = logging.getLogger(__name__)
 COUPON_COOLDOWN = 3600   # 1 hour per ASIN+coupon combo
 _NOTIFY = "amazon_coupons_notify.json"
 
+# URL fragments (#electronics, #beauty, etc.) are client-side JS filters —
+# the server returns identical HTML for all of them. One request is enough.
 COUPON_URLS = [
     "https://www.amazon.com/coupons",
-    "https://www.amazon.com/coupons#appliances",
-    "https://www.amazon.com/coupons#beauty",
-    "https://www.amazon.com/coupons#electronics",
-    "https://www.amazon.com/coupons#grocery",
-    "https://www.amazon.com/coupons#health",
-    "https://www.amazon.com/coupons#home",
-    "https://www.amazon.com/coupons#kitchen",
-    "https://www.amazon.com/coupons#office",
-    "https://www.amazon.com/coupons#pet",
-    "https://www.amazon.com/coupons#sports",
-    "https://www.amazon.com/coupons#tools",
-    "https://www.amazon.com/coupons#toys",
 ]
 
 

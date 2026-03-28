@@ -16,6 +16,8 @@ import colorlog
 from monitors.amazon         import AmazonMonitor
 from monitors.amazon_coupons import AmazonCouponsMonitor
 from monitors.amazon_deals   import AmazonDealsMonitor
+from monitors.amazon_outlet  import AmazonOutletMonitor
+from monitors.woot           import WootMonitor
 from monitors.bestbuy        import BestBuyMonitor
 from monitors.walmart        import WalmartMonitor
 from monitors.target         import TargetMonitor
@@ -84,6 +86,8 @@ async def _main() -> None:
         AmazonMonitor(),
         AmazonCouponsMonitor(),   # auto-scans amazon.com/coupons hub
         AmazonDealsMonitor(),     # auto-scans amazon.com/deals page
+        AmazonOutletMonitor(),    # auto-scans amazon.com/outlet/deals (overstock)
+        WootMonitor(),            # woot.com daily deals + Woot-Off flash sales
         BestBuyMonitor(),
         WalmartMonitor(),
         TargetMonitor(),
