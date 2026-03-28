@@ -6,6 +6,7 @@ Anti-bot: curl_cffi Chrome impersonation; 1-hour backoff on 429/503/412/521.
 import asyncio
 import json
 import logging
+import random
 import re
 import time
 
@@ -22,7 +23,7 @@ log = logging.getLogger(__name__)
 
 DEAL_THRESHOLD = 0.15   # 15% off
 DEAL_COOLDOWN  = 3600
-BOT_BACKOFF    = 3600   # 1 hour
+BOT_BACKOFF    = 1200   # 20 min per-URL backoff (was 1hr — too long, miss restocks)
 
 BLOCK_STATUSES = {412, 429, 503, 521}
 BLOCK_TITLES   = {"robot", "blocked", "access denied", "captcha", "unavailable"}
@@ -42,23 +43,27 @@ class WalmartMonitor(BaseMonitor):
     interval = WALMART_INTERVAL
 
     def __init__(self):
-        self._blocked_until: float = 0.0
+        # Per-URL backoff dict: item_id → unblock_timestamp
+        # Blocked URLs are skipped individually so the rest still run
+        self._url_blocked: dict[str, float] = {}
 
     async def check(self) -> None:
-        if time.time() < self._blocked_until:
-            log.warning("[Walmart] Bot-block backoff — %ds remaining",
-                        int(self._blocked_until - time.time()))
-            return
-
         prices = await load(_PRICES)
         stock  = await load(_STOCK)
         notify = await load(_NOTIFY)
 
-        session = make_session("chrome120")
+        # Rotate chrome version each cycle to vary TLS fingerprint
+        impersonate = random.choice(["chrome110", "chrome120"])
+        session = make_session(impersonate)
         try:
             for url in WALMART_PRODUCTS:
+                item_id = _item_id(url)
+                if time.time() < self._url_blocked.get(item_id, 0):
+                    log.debug("[Walmart] Skipping %s (backoff)", item_id)
+                    continue
                 await self._check_product(url, session, prices, stock, notify)
-                await asyncio.sleep(2)
+                # Random delay 3–7s between products — mimics human browsing pace
+                await asyncio.sleep(random.uniform(3.0, 7.0))
         finally:
             await session.close()
 
@@ -75,12 +80,12 @@ class WalmartMonitor(BaseMonitor):
             resp = await session.get(url, headers=headers, timeout=20, allow_redirects=True)
         except Exception as exc:
             log.debug("[Walmart] Request error %s: %s", item_id, exc)
-            self._blocked_until = time.time() + BOT_BACKOFF
+            self._url_blocked[item_id] = time.time() + (BOT_BACKOFF // 2)
             return
 
         if resp.status_code in BLOCK_STATUSES:
-            log.warning("[Walmart] Blocked (HTTP %d) — backoff %ds", resp.status_code, BOT_BACKOFF)
-            self._blocked_until = time.time() + BOT_BACKOFF
+            log.warning("[Walmart] Blocked (HTTP %d) %s — backoff %ds", resp.status_code, item_id, BOT_BACKOFF)
+            self._url_blocked[item_id] = time.time() + BOT_BACKOFF
             return
 
         if resp.status_code != 200:
@@ -89,8 +94,8 @@ class WalmartMonitor(BaseMonitor):
         soup = BeautifulSoup(resp.text, "lxml")
         page_title = (soup.title.string or "").lower()
         if any(t in page_title for t in BLOCK_TITLES):
-            log.warning("[Walmart] Bot block detected — backoff %ds", BOT_BACKOFF)
-            self._blocked_until = time.time() + BOT_BACKOFF
+            log.warning("[Walmart] Bot block detected %s — backoff %ds", item_id, BOT_BACKOFF)
+            self._url_blocked[item_id] = time.time() + BOT_BACKOFF
             return
 
         product = _extract_next_data(soup)

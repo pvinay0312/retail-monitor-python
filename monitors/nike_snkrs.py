@@ -20,6 +20,7 @@ API endpoints:
 import asyncio
 import datetime
 import logging
+import random
 import time
 
 from config.products import NIKE_STYLE_CODES, SNKRS_CHANNEL_ID
@@ -193,7 +194,7 @@ class NikeSnkrsMonitor(BaseMonitor):
         headers["Accept"] = "application/json"
 
         for style_code in all_styles:
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(random.uniform(0.8, 2.0))
             api_url = (
                 f"https://api.nike.com/product_feed/threads/v2"
                 f"?filter=marketplace(US)&filter=language(en)"

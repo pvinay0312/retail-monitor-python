@@ -33,9 +33,11 @@ DEAL_MIN_SCORE = int(os.getenv("DEAL_MIN_SCORE", "40"))
 CHROMIUM_PATH = os.getenv("CHROMIUM_PATH", "")   # leave blank for Playwright default
 
 # ── Monitor intervals (seconds) ───────────────────────────────────────────────
-AMAZON_INTERVAL    = int(os.getenv("AMAZON_INTERVAL",    "300"))   # 5 min
-BESTBUY_INTERVAL   = int(os.getenv("BESTBUY_INTERVAL",   "180"))   # 3 min
-WALMART_INTERVAL   = int(os.getenv("WALMART_INTERVAL",   "300"))   # 5 min
-TARGET_INTERVAL    = int(os.getenv("TARGET_INTERVAL",    "300"))   # 5 min
-FOOTSITES_INTERVAL = int(os.getenv("FOOTSITES_INTERVAL", "600"))   # 10 min
-NIKE_INTERVAL      = int(os.getenv("NIKE_INTERVAL",      "120"))   # 2 min
+# Nike/BestBuy are fastest because drops sell out in seconds/minutes.
+# Walmart/Amazon/Target scrape individual pages so stay slower to avoid blocks.
+AMAZON_INTERVAL    = int(os.getenv("AMAZON_INTERVAL",    "240"))   # 4 min
+BESTBUY_INTERVAL   = int(os.getenv("BESTBUY_INTERVAL",    "90"))   # 90s — batch API, safe
+WALMART_INTERVAL   = int(os.getenv("WALMART_INTERVAL",   "180"))   # 3 min
+TARGET_INTERVAL    = int(os.getenv("TARGET_INTERVAL",    "240"))   # 4 min
+FOOTSITES_INTERVAL = int(os.getenv("FOOTSITES_INTERVAL", "300"))   # 5 min
+NIKE_INTERVAL      = int(os.getenv("NIKE_INTERVAL",       "60"))   # 60s — drops sell out fast

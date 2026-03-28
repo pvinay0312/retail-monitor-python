@@ -6,6 +6,7 @@ Anti-bot: curl_cffi Chrome impersonation + 30-min backoff on 429.
 """
 import asyncio
 import logging
+import random
 import re
 import time
 
@@ -20,7 +21,7 @@ log = logging.getLogger(__name__)
 
 DEAL_THRESHOLD  = 0.10   # 10% off
 DEAL_COOLDOWN   = 6 * 3600
-BOT_BACKOFF     = 1800   # 30 min
+BOT_BACKOFF     = 600    # 10 min — priceBlocks API is lenient, short backoff is fine
 
 _PRICES = "bb_prices.json"
 _STOCK  = "bb_stock.json"
@@ -59,7 +60,8 @@ class BestBuyMonitor(BaseMonitor):
             for i in range(0, len(skus), batch_size):
                 batch = skus[i:i + batch_size]
                 await self._check_batch(batch, url_map, session, prices, stock, notify)
-                await asyncio.sleep(2)
+                if i + batch_size < len(skus):
+                    await asyncio.sleep(random.uniform(1.5, 3.5))
         finally:
             await session.close()
 
@@ -71,7 +73,13 @@ class BestBuyMonitor(BaseMonitor):
         api_url = "https://www.bestbuy.com/api/3.0/priceBlocks?skus=" + ",".join(skus)
         ua = random_ua()
         headers = base_headers(ua, referer="https://www.bestbuy.com/")
+        # API call — override Sec-Fetch headers to match XHR from within the site
         headers["Accept"] = "application/json, text/plain, */*"
+        headers["Sec-Fetch-Dest"] = "empty"
+        headers["Sec-Fetch-Mode"] = "cors"
+        headers["Sec-Fetch-Site"] = "same-origin"
+        headers["X-Requested-With"] = "XMLHttpRequest"
+        headers.pop("Upgrade-Insecure-Requests", None)
 
         try:
             resp = await session.get(api_url, headers=headers, timeout=15)
