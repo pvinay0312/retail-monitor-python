@@ -130,6 +130,46 @@ class WootMonitor(BaseMonitor):
 
             raw_cards = await page.evaluate("""
                 () => {
+                    // Strip price/savings noise from a candidate title string
+                    function cleanTitle(raw) {
+                        if (!raw) return '';
+                        // Remove leading price patterns: "$259.99 Reference PriceSave: $50 (16%)"
+                        let t = raw
+                            .replace(/^(\\$[\\d.,]+\\s*)+/g, '')
+                            .replace(/^[\\d.,]+\\s*$/g, '')
+                            .replace(/Reference Price[^A-Z]*/gi, '')
+                            .replace(/Save:\\s*\\$[\\d.,]+\\s*\\([^)]+\\)/gi, '')
+                            .replace(/\\([\\d]+%\\s*off\\)/gi, '')
+                            .replace(/\\$[\\d,]+\\.\\d{2}/g, '')
+                            .replace(/\\s{2,}/g, ' ')
+                            .trim();
+                        return t;
+                    }
+
+                    // Best title candidate from a card element
+                    function extractTitle(card, link) {
+                        const img = card.querySelector('img[alt]');
+                        const imgAlt = img ? img.getAttribute('alt') : '';
+
+                        // Img alt that looks like a real product name (not "deal image" etc.)
+                        if (imgAlt && imgAlt.length > 8 && !/deal|image|photo|thumb|logo/i.test(imgAlt)) {
+                            return imgAlt;
+                        }
+                        // data-name / aria-label on the card
+                        const dataName = card.getAttribute('data-name') || card.getAttribute('aria-label');
+                        if (dataName && dataName.length > 5) return dataName;
+
+                        // Heading — clean it before using
+                        const heading = card.querySelector('h1,h2,h3,h4');
+                        if (heading) {
+                            const cleaned = cleanTitle(heading.textContent);
+                            if (cleaned.length >= 5) return cleaned;
+                        }
+                        // Link text as last resort
+                        const linkText = cleanTitle(link.textContent);
+                        return linkText;
+                    }
+
                     const results = [];
                     const seen = new Set();
 
@@ -151,12 +191,8 @@ class WootMonitor(BaseMonitor):
                         const prices = priceMatches.map(p => parseFloat(p.replace(/[\\$,]/g, '')))
                                                     .filter(p => p > 0);
 
-                        // Title: prefer heading > img alt > link text
-                        const heading = card.querySelector('h1,h2,h3,h4');
-                        const img     = card.querySelector('img[alt]');
-                        const title   = (heading && heading.textContent.trim()) ||
-                                        (img && img.getAttribute('alt') && img.getAttribute('alt').length > 5 && img.getAttribute('alt')) ||
-                                        link.textContent.trim() || '';
+                        const title = extractTitle(card, link);
+                        const img   = card.querySelector('img');
 
                         // Condition text
                         const condMatch = txt.match(/\\b(New|Refurbished|Open Box|Like New)\\b/i);
@@ -186,10 +222,8 @@ class WootMonitor(BaseMonitor):
                             const txt = card.innerText || '';
                             const priceMatches = txt.match(/\$[\d,]+\\.\\d{2}/g) || [];
                             const prices = priceMatches.map(p => parseFloat(p.replace(/[\\$,]/g,''))).filter(p=>p>0);
-                            const heading = card.querySelector('h1,h2,h3,h4');
-                            const img     = card.querySelector('img');
-                            const title   = (heading && heading.textContent.trim()) ||
-                                            (img && img.alt) || link.textContent.trim() || '';
+                            const img   = card.querySelector('img');
+                            const title = extractTitle(card, link);
                             if (title.length >= 5 && prices.length > 0) {
                                 results.push({ title: title.substring(0,200), url: href,
                                                prices, image: img ? img.src : '', condition: '' });
