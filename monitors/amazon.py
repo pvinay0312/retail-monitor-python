@@ -100,12 +100,12 @@ class AmazonMonitor(BaseMonitor):
             self._captcha_until = time.time() + CAPTCHA_BACKOFF
             return
 
-        name         = _extract_name(soup)
-        price        = _extract_price(soup)
-        was_price    = _extract_was_price(soup)
-        coupon_text  = _extract_coupon(soup)
-        in_stock     = _is_in_stock(soup)
-        image        = _extract_image(soup)
+        name                    = _extract_name(soup)
+        price                   = _extract_price(soup)
+        was_price               = _extract_was_price(soup)
+        coupon_text, is_promo   = _extract_coupon(soup)
+        in_stock                = _is_in_stock(soup)
+        image                   = _extract_image(soup)
 
         if not name or price is None:
             log.debug("[Amazon] Could not parse %s — skipping", asin)
@@ -195,6 +195,7 @@ class AmazonMonitor(BaseMonitor):
                 original_price=was_str,
                 discount_pct=pct_str or "N/A",
                 coupon=coupon_text or "",
+                is_promo_code=is_promo,
                 image=image,
                 is_freebie=is_freebie,
                 extra_fields=[{"name": "🔑 ASIN", "value": asin, "inline": True}],
@@ -253,15 +254,40 @@ def _extract_was_price(soup: BeautifulSoup) -> float | None:
     return None
 
 
-def _extract_coupon(soup: BeautifulSoup) -> str:
-    """Return coupon label text if present, else empty string."""
+def _extract_coupon(soup: BeautifulSoup) -> tuple[str, bool]:
+    """
+    Return (coupon_text, is_promo_code).
+    is_promo_code=True  → short alphanumeric code typed at checkout (e.g. DZTZGW9X)
+    is_promo_code=False → clip/checkbox coupon on the product page
+    """
+    # Promo code pre-filled in input box
+    for input_id in ("promotionInput", "gcpromoinput"):
+        tag = soup.find("input", {"id": input_id})
+        if tag:
+            val = tag.get("value", "").strip()
+            if val and re.match(r"^[A-Z0-9]{4,20}$", val.upper()):
+                return val.upper(), True
+
+    # Promo code shown as plain text near "Enter code" labels
+    for label in soup.find_all(string=re.compile(r"promo(?:tion)? ?code", re.I)):
+        parent = label.parent
+        if parent:
+            code = re.search(r"\b([A-Z0-9]{5,20})\b", parent.get_text())
+            if code:
+                return code.group(1), True
+
+    # Clip coupon badge (percentage or dollar)
     for cls in ["couponBadge", "s-coupon-clipped", "coupon-tip-content"]:
         tag = soup.find(class_=cls)
         if tag:
-            return tag.get_text(strip=True)
-    # Look for "Apply X% coupon" checkbox text
-    m = soup.find(string=re.compile(r'Apply\s+\d+%?\s+coupon', re.I))
-    return str(m).strip() if m else ""
+            return tag.get_text(strip=True), False
+
+    # "Apply X% coupon" checkbox
+    m = soup.find(string=re.compile(r"Apply\s+[\d$]+%?\s+coupon", re.I))
+    if m:
+        return str(m).strip(), False
+
+    return "", False
 
 
 def _is_in_stock(soup: BeautifulSoup) -> bool:

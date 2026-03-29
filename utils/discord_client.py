@@ -143,30 +143,44 @@ async def send_deal_alert(
     original_price: str,
     discount_pct: str,
     coupon: str = "",
+    is_promo_code: bool = False,
     image: str = "",
     extra_fields: Optional[list[dict]] = None,
     is_freebie: bool = False,
 ) -> bool:
+    # ── Title: discount % shown up-front like "🔥 60% OFF — Product Name"
+    pct_label = f" {discount_pct.upper()}" if discount_pct and discount_pct != "N/A" else ""
+
     if is_freebie:
-        emoji = "🆓"
-        title = f"🆓 FREEBIE — {name}"
+        title       = f"🆓 FREE{pct_label} — {name}"
         description = "@here **This item is FREE or near-free! Grab it before it's gone.**"
+    elif coupon and is_promo_code:
+        title       = f"🏷️ USE CODE{pct_label} — {name}"
+        description = f"@here **Use code `{coupon}` at checkout to save{pct_label or ''}!**"
     elif coupon:
-        emoji = "🎟️"
-        title = f"🎟️ COUPON DEAL — {name}"
-        description = f"**Clip the coupon before checkout:** `{coupon}`"
+        title       = f"🎟️ COUPON{pct_label} — {name}"
+        description = f"@here **Clip the coupon on the product page before checkout!**"
     else:
-        emoji = "🔥"
-        title = f"🔥 PRICE DROP — {name}"
-        description = ""
+        title       = f"🔥 PRICE DROP{pct_label} — {name}"
+        description = "@here **Limited-time price drop — grab it before it ends!**"
 
     fields = [
-        {"name": "💰 Sale Price",     "value": f"**{price}**",              "inline": True},
-        {"name": "📦 Original Price", "value": f"~~{original_price}~~",     "inline": True},
-        {"name": "📉 Savings",        "value": f"**{discount_pct}**",        "inline": True},
+        {"name": "💰 Sale Price",     "value": f"**{price}**",          "inline": True},
+        {"name": "📦 Original Price", "value": f"~~{original_price}~~", "inline": True},
+        {"name": "📉 Savings",        "value": f"**{discount_pct}**",   "inline": True},
     ]
-    if coupon:
-        fields.append({"name": "🎟️ Coupon Code", "value": f"`{coupon}`", "inline": True})
+    if coupon and is_promo_code:
+        fields.append({
+            "name":   "🏷️ Promo Code",
+            "value":  f"```\n{coupon}\n```",   # big code block — easy to copy
+            "inline": False,
+        })
+    elif coupon:
+        fields.append({
+            "name":   "🎟️ Coupon",
+            "value":  f"**{coupon}** ← clip on product page",
+            "inline": False,
+        })
     fields.append({"name": "🛒 Buy Now", "value": f"[Click here to purchase]({url})", "inline": False})
     if extra_fields:
         fields.extend(extra_fields)
