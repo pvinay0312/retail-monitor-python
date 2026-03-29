@@ -136,6 +136,13 @@ class AmazonMonitor(BaseMonitor):
             "oos_count": 0 if in_stock else prev_oos_count + 1,
         }
 
+        # Skip price/deal detection when the item can't be purchased.
+        # When unavailable, Amazon still renders the page with accessory prices
+        # inside the same container — scraping those causes false deal alerts.
+        if not in_stock:
+            log.debug("[Amazon] %s out of stock — skipping deal check", asin)
+            return
+
         # ── Price-drop / coupon detection ─────────────────────────────────────
         prev_price = prices.get(asin)
         prices[asin] = price  # always update
