@@ -1,32 +1,30 @@
 """
-Woot.com monitor — scrapes woot.com/deals for electronics & computer deals.
+Woot.com monitor — tracks daily deals and Woot-Off flash sales.
 
-Woot is Amazon-owned and offers daily deals on electronics, computers, and home
-goods at 40-70% off — including new overstock and refurbished items.
-Woot-Offs (rapid-fire flash sales where a new item loads the moment the previous
-one sells out) are especially valuable for cook groups.
+Woot migrated to a fully client-side-rendered jQuery app in early 2026.
+The old /deals and /electronics/deals paths now return 404, and the HTML
+shell at /alldeals / /category/* contains zero product data — everything
+loads via AJAX after page JS executes.
 
-Strategy:
-  • Fetches woot.com deals page with curl_cffi Chrome impersonation
-  • Primary parse: __NEXT_DATA__ JSON blob (reliable, doesn't depend on CSS classes)
-  • Fallback parse: CSS class / article / link heuristics
-  • Filters for New / Refurbished condition only (skips Used/Good/Acceptable)
-  • Scores via deal scorer — only posts if score >= MIN_SCORE_TO_ALERT
-  • Detects Woot-Off mode and adds ⚡ warning to alerts
-  • Deduplicates by product URL with 1-hour cooldown
+Strategy (updated):
+  1. Launch patchright browser and navigate to each Woot category page.
+  2. Intercept the JSON API response the page JS loads automatically
+     (matches *.woot.com/api/* or api.woot.com/* patterns).
+  3. If no API intercept fires, fall back to full DOM extraction:
+     • look for rendered deal card elements
+     • pull price / title / URL / image from the live DOM
+  4. Score each deal; post those above MIN_SCORE_TO_ALERT.
+  5. Detect Woot-Off mode (orange flash-sale banner) and flag alerts.
 """
 from __future__ import annotations
-import asyncio
-import json
-import logging
-import re
-import time
 
-from bs4 import BeautifulSoup
+import asyncio
+import logging
+import time
+from typing import Any
 
 from config.settings import WOOT_WEBHOOK_URL, WOOT_INTERVAL
 from monitors.base import BaseMonitor
-from utils.anti_bot import make_session, base_headers, random_ua
 from utils.deal_scorer import calculate_deal_score, score_label, MIN_SCORE_TO_ALERT
 from utils.discord_client import send_deal_alert
 from utils.storage import load, save
@@ -36,12 +34,13 @@ log = logging.getLogger(__name__)
 DEAL_COOLDOWN = 3600   # 1 hour per item URL
 _NOTIFY       = "woot_notify.json"
 
+# Woot category pages (correct URLs as of 2026)
 WOOT_URLS = [
-    "https://www.woot.com/deals",
-    "https://www.woot.com/electronics/deals",
-    "https://www.woot.com/computers/deals",
+    "https://www.woot.com/alldeals",
+    "https://www.woot.com/category/electronics",
+    "https://www.woot.com/category/computers",
+    "https://www.woot.com/category/home",
 ]
-
 
 class WootMonitor(BaseMonitor):
     name     = "Woot"
@@ -53,43 +52,171 @@ class WootMonitor(BaseMonitor):
             return
 
         notify = await load(_NOTIFY)
-        session = make_session("chrome120")
-        found = 0
-        try:
-            for url in WOOT_URLS:
-                deals = await self._fetch_deals(session, url)
-                for deal in deals:
-                    key = deal["url"]
-                    if (time.time() - notify.get(key, 0)) < DEAL_COOLDOWN:
-                        continue
-                    if deal["score"] < MIN_SCORE_TO_ALERT:
-                        continue
-                    await self._post_alert(deal)
-                    notify[key] = time.time()
-                    found += 1
-                    await asyncio.sleep(1)
-        finally:
-            await session.close()
+        found  = 0
+
+        for url in WOOT_URLS:
+            deals = await self._fetch_deals_browser(url)
+            for deal in deals:
+                key = deal["url"]
+                if (time.time() - notify.get(key, 0)) < DEAL_COOLDOWN:
+                    continue
+                if deal["score"] < MIN_SCORE_TO_ALERT:
+                    continue
+                await self._post_alert(deal)
+                notify[key] = time.time()
+                found += 1
+                await asyncio.sleep(1.5)
 
         await save(_NOTIFY, notify)
         if found:
             log.info("[Woot] Posted %d deals this cycle", found)
+        else:
+            log.info("[Woot] Cycle complete — no new qualifying deals")
 
-    async def _fetch_deals(self, session, url: str) -> list[dict]:
-        ua = random_ua()
-        headers = base_headers(ua, referer="https://www.woot.com/")
-        headers["Accept"] = "text/html,application/xhtml+xml,*/*;q=0.8"
+    # ── Browser-based fetch ────────────────────────────────────────────────────
+
+    async def _fetch_deals_browser(self, url: str) -> list[dict]:
+        """Navigate to the Woot page in patchright; intercept API or scrape DOM."""
+        from utils.playwright_session import _launch_browser
+
+        p_ctx = browser = context = page = None
+        intercepted: list[Any] = []
+
         try:
-            resp = await session.get(url, headers=headers, timeout=25, allow_redirects=True)
-            if resp.status_code != 200:
-                log.debug("[Woot] %s → HTTP %d", url, resp.status_code)
-                return []
-            deals = _parse_woot(resp.text)
-            log.info("[Woot] %s → parsed %d qualifying deals", url, len(deals))
+            p_ctx, browser, context = await _launch_browser()
+            page = await context.new_page()
+
+            # Capture any JSON API responses the page triggers
+            async def _on_response(response) -> None:
+                url_r = response.url
+                if any(k in url_r for k in ("api.woot", "/api/", "events.json", "offers.json")):
+                    if response.ok:
+                        try:
+                            data = await response.json()
+                            intercepted.append(data)
+                            log.debug("[Woot] Intercepted API: %s", url_r)
+                        except Exception:
+                            pass
+
+            page.on("response", _on_response)
+
+            log.info("[Woot] Navigating to %s ...", url)
+            try:
+                await page.goto(url, timeout=35_000, wait_until="networkidle")
+            except Exception:
+                # networkidle can time out on pages with perpetual background calls
+                try:
+                    await page.goto(url, timeout=35_000, wait_until="domcontentloaded")
+                    await asyncio.sleep(5)   # wait for AJAX deal load
+                except Exception as exc:
+                    log.warning("[Woot] Navigation error for %s: %s", url, exc)
+                    return []
+
+            # ── Try intercepted API data first ────────────────────────────────
+            if intercepted:
+                deals = []
+                for data in intercepted:
+                    deals.extend(_parse_api_response(data))
+                if deals:
+                    log.info("[Woot] %s → %d deals via API intercept", url, len(deals))
+                    return deals
+
+            # ── Fallback: extract from rendered DOM ────────────────────────────
+            log.debug("[Woot] No API intercepted for %s — extracting from DOM", url)
+            is_wootoff = await page.evaluate("""
+                () => document.body.innerText.toLowerCase().includes('woot-off') ||
+                      document.body.className.toLowerCase().includes('wootoff')
+            """)
+
+            raw_cards = await page.evaluate("""
+                () => {
+                    const results = [];
+                    const seen = new Set();
+
+                    // Strategy 1: offer links
+                    const offerLinks = document.querySelectorAll(
+                        'a[href*="/offers/"], a[href*="woot.com/deals/"], a[href*="woot.com/products/"]'
+                    );
+
+                    for (const link of offerLinks) {
+                        const href = link.href;
+                        if (!href || seen.has(href)) continue;
+                        seen.add(href);
+
+                        const card = link.closest('div, article, section, li') || link.parentElement || link;
+                        const txt  = card.innerText || '';
+
+                        // Prices: grab all $X.XX patterns
+                        const priceMatches = txt.match(/\$[\d,]+\\.\\d{2}/g) || [];
+                        const prices = priceMatches.map(p => parseFloat(p.replace(/[\\$,]/g, '')))
+                                                    .filter(p => p > 0);
+
+                        // Title: prefer heading > img alt > link text
+                        const heading = card.querySelector('h1,h2,h3,h4');
+                        const img     = card.querySelector('img[alt]');
+                        const title   = (heading && heading.textContent.trim()) ||
+                                        (img && img.getAttribute('alt') && img.getAttribute('alt').length > 5 && img.getAttribute('alt')) ||
+                                        link.textContent.trim() || '';
+
+                        // Condition text
+                        const condMatch = txt.match(/\\b(New|Refurbished|Open Box|Like New)\\b/i);
+
+                        if (title.length >= 5 && prices.length > 0) {
+                            results.push({
+                                title:    title.substring(0, 200),
+                                url:      href,
+                                prices:   prices,
+                                image:    img ? img.src : '',
+                                condition: condMatch ? condMatch[1] : '',
+                            });
+                        }
+                    }
+
+                    // Strategy 2: any card with price + link if strategy 1 found nothing
+                    if (results.length === 0) {
+                        const cards = document.querySelectorAll(
+                            'article, [class*="deal"], [class*="item"], [class*="offer"], [class*="card"]'
+                        );
+                        for (const card of cards) {
+                            const link = card.querySelector('a[href]');
+                            if (!link) continue;
+                            const href = link.href;
+                            if (!href || seen.has(href) || !href.includes('woot.com')) continue;
+                            seen.add(href);
+                            const txt = card.innerText || '';
+                            const priceMatches = txt.match(/\$[\d,]+\\.\\d{2}/g) || [];
+                            const prices = priceMatches.map(p => parseFloat(p.replace(/[\\$,]/g,''))).filter(p=>p>0);
+                            const heading = card.querySelector('h1,h2,h3,h4');
+                            const img     = card.querySelector('img');
+                            const title   = (heading && heading.textContent.trim()) ||
+                                            (img && img.alt) || link.textContent.trim() || '';
+                            if (title.length >= 5 && prices.length > 0) {
+                                results.push({ title: title.substring(0,200), url: href,
+                                               prices, image: img ? img.src : '', condition: '' });
+                            }
+                        }
+                    }
+                    return results;
+                }
+            """)
+
+            deals = _build_deals_from_dom(raw_cards, bool(is_wootoff))
+            log.info("[Woot] %s → %d deals via DOM extraction", url, len(deals))
             return deals
+
         except Exception as exc:
-            log.warning("[Woot] Fetch error for %s: %s", url, exc)
+            log.warning("[Woot] Browser error for %s: %s", url, exc)
             return []
+        finally:
+            try:
+                if page:    await page.close()
+                if context: await context.close()
+                if browser: await browser.close()
+                if p_ctx:   await p_ctx.__aexit__(None, None, None)
+            except Exception:
+                pass
+
+    # ── Discord alert ──────────────────────────────────────────────────────────
 
     async def _post_alert(self, deal: dict) -> None:
         price     = deal["deal_price"]
@@ -109,11 +236,13 @@ class WootMonitor(BaseMonitor):
                  " ⚡ WOOT-OFF" if wootoff else "")
 
         extra = [
-            {"name": "🏷️ Condition",  "value": condition or "Unknown",              "inline": True},
+            {"name": "🏷️ Condition",  "value": condition or "New/Refurb",            "inline": True},
             {"name": "⭐ Deal Score",  "value": f"{score}/100 {score_label(score)}", "inline": True},
         ]
         if wootoff:
-            extra.insert(0, {"name": "⚡ WOOT-OFF", "value": "Flash sale — buy NOW before it's gone!", "inline": False})
+            extra.insert(0, {"name": "⚡ WOOT-OFF",
+                              "value": "Flash sale — buy NOW before it's gone!",
+                              "inline": False})
 
         await send_deal_alert(
             WOOT_WEBHOOK_URL,
@@ -129,96 +258,45 @@ class WootMonitor(BaseMonitor):
         )
 
 
-# ── HTML parser ────────────────────────────────────────────────────────────────
+# ── Parsers ────────────────────────────────────────────────────────────────────
 
-def _parse_woot(html: str) -> list[dict]:
-    """
-    Parse Woot deal cards from an HTML page.
-
-    Primary strategy: extract the Next.js __NEXT_DATA__ JSON blob which
-    contains the full, structured offer list — far more reliable than
-    matching CSS classes that change with every Woot frontend deploy.
-
-    Fallback strategy: CSS class / article / link heuristics for pages
-    that don't embed __NEXT_DATA__ (e.g. category sub-pages).
-    """
-    soup = BeautifulSoup(html, "lxml")
-
-    # Detect Woot-Off mode (orange banner or body class)
-    is_wootoff = bool(
-        soup.find(string=re.compile(r"woot.?off", re.I)) or
-        soup.find(class_=re.compile(r"wootoff", re.I))
-    )
-
-    # ── Primary: __NEXT_DATA__ JSON ───────────────────────────────────────────
-    next_data_tag = soup.find("script", id="__NEXT_DATA__")
-    if next_data_tag:
-        try:
-            data = json.loads(next_data_tag.string or "")
-            deals = _parse_next_data(data, is_wootoff)
-            if deals:
-                log.debug("[Woot] __NEXT_DATA__ → %d raw offers", len(deals))
-                return deals
-        except Exception as exc:
-            log.debug("[Woot] __NEXT_DATA__ parse error: %s", exc)
-
-    # ── Fallback: CSS / article / link heuristics ─────────────────────────────
-    log.debug("[Woot] __NEXT_DATA__ empty — falling back to HTML heuristics")
-    return _parse_woot_html(soup, is_wootoff)
-
-
-def _parse_next_data(data: dict, is_wootoff: bool) -> list[dict]:
-    """Recursively find offer arrays in the Next.js page data blob."""
-    offers = _find_offer_list(data)
+def _parse_api_response(data: Any) -> list[dict]:
+    """Parse JSON from an intercepted Woot API response."""
+    if not isinstance(data, (dict, list)):
+        return []
+    offers = _find_offer_list(data) if isinstance(data, dict) else (data if _looks_like_offer_list(data) else [])
     if not offers:
         return []
 
     deals: list[dict] = []
-    seen_urls: set[str] = set()
+    seen: set[str] = set()
 
     for o in offers:
         if not isinstance(o, dict):
             continue
 
-        # ── Title ──────────────────────────────────────────────────────────────
-        title = (
-            o.get("name") or o.get("title") or o.get("offerTitle") or
-            o.get("productName") or ""
-        )[:200]
+        title = (o.get("name") or o.get("title") or o.get("offerTitle") or
+                 o.get("productName") or "")[:200]
         if not title or len(title) < 5:
             continue
 
-        # ── URL ────────────────────────────────────────────────────────────────
-        raw_url = (
-            o.get("url") or o.get("offerUrl") or o.get("canonicalUrl") or
-            o.get("slug") or ""
-        )
+        raw_url = (o.get("url") or o.get("offerUrl") or o.get("canonicalUrl") or o.get("slug") or "")
         if raw_url and not raw_url.startswith("http"):
             raw_url = f"https://www.woot.com{raw_url}"
-        if not raw_url:
+        if not raw_url or raw_url in seen:
             continue
-        if raw_url in seen_urls:
-            continue
-        seen_urls.add(raw_url)
+        seen.add(raw_url)
 
-        # ── Prices ─────────────────────────────────────────────────────────────
-        sale_price = _coerce_price(
-            o.get("salePrice") or o.get("price") or o.get("currentPrice") or
-            o.get("minSalePrice") or 0
-        )
-        list_price = _coerce_price(
-            o.get("listPrice") or o.get("regularPrice") or o.get("msrp") or
-            o.get("maxListPrice") or 0
-        )
+        sale_price = _coerce_price(o.get("salePrice") or o.get("price") or o.get("currentPrice") or
+                                   o.get("minSalePrice") or 0)
+        list_price = _coerce_price(o.get("listPrice") or o.get("regularPrice") or o.get("msrp") or
+                                   o.get("maxListPrice") or 0)
         if not sale_price:
             continue
-        original_price = list_price if list_price and list_price > sale_price else None
-        discount_pct   = (
-            (original_price - sale_price) / original_price * 100
-            if original_price else 0.0
-        )
 
-        # Woot sometimes provides percentOff directly
+        original_price = list_price if list_price and list_price > sale_price else None
+        discount_pct = (original_price - sale_price) / original_price * 100 if original_price else 0.0
+
         if not discount_pct and o.get("percentOff"):
             try:
                 discount_pct = float(o["percentOff"])
@@ -227,88 +305,110 @@ def _parse_next_data(data: dict, is_wootoff: bool) -> list[dict]:
             except (ValueError, ZeroDivisionError):
                 pass
 
-        # ── Condition ──────────────────────────────────────────────────────────
-        condition = (
-            o.get("condition") or o.get("itemCondition") or
-            o.get("conditionDescription") or ""
-        )
+        condition = o.get("condition") or o.get("itemCondition") or ""
         if isinstance(condition, dict):
             condition = condition.get("displayName") or condition.get("name") or ""
         condition = str(condition).strip()
-
         if condition.lower() in ("used", "acceptable", "good"):
             continue
 
-        # ── Image ──────────────────────────────────────────────────────────────
         image = ""
         photos = o.get("photos") or o.get("images") or o.get("photo") or []
         if isinstance(photos, list) and photos:
             first = photos[0]
             image = (first.get("url") or first.get("src") or first) if isinstance(first, dict) else str(first)
-        elif isinstance(photos, str):
-            image = photos
         if not image:
             image = o.get("imageUrl") or o.get("imageUri") or o.get("primaryImage") or ""
 
-        # ── Category ───────────────────────────────────────────────────────────
-        url_lower = raw_url.lower()
-        if "computer" in url_lower or "laptop" in url_lower:
-            category = "computers"
-        elif "phone" in url_lower or "tablet" in url_lower:
-            category = "tablets"
-        else:
-            category = "electronics"
-
+        category = _guess_category(raw_url)
         score = calculate_deal_score(
             discount_pct=discount_pct,
             original_price=original_price or 0,
             deal_price=sale_price,
             category=category,
         )
-
         deals.append({
-            "title":          title,
-            "url":            raw_url,
-            "deal_price":     sale_price,
-            "original_price": original_price,
-            "discount_pct":   discount_pct,
-            "condition":      condition,
-            "image":          str(image),
-            "score":          score,
-            "is_wootoff":     is_wootoff,
+            "title": title, "url": raw_url, "deal_price": sale_price,
+            "original_price": original_price, "discount_pct": discount_pct,
+            "condition": condition, "image": str(image), "score": score,
+            "is_wootoff": False,
         })
 
     return deals
 
 
+def _build_deals_from_dom(raw_cards: list[dict], is_wootoff: bool) -> list[dict]:
+    """Convert DOM-extracted card dicts into scored deal dicts."""
+    deals: list[dict] = []
+    for card in raw_cards:
+        prices = sorted(set(card.get("prices", [])), reverse=True)
+        if not prices:
+            continue
+
+        # Lowest price = sale price; highest = original if there are 2+
+        sale_price = prices[-1]
+        original_price = prices[0] if len(prices) >= 2 and prices[0] > sale_price else None
+        discount_pct = (
+            (original_price - sale_price) / original_price * 100
+            if original_price else 0.0
+        )
+
+        condition = card.get("condition", "")
+        if condition.lower() in ("used", "acceptable", "good"):
+            continue
+
+        raw_url = card.get("url", "")
+        category = _guess_category(raw_url)
+        score = calculate_deal_score(
+            discount_pct=discount_pct,
+            original_price=original_price or 0,
+            deal_price=sale_price,
+            category=category,
+        )
+        deals.append({
+            "title": card.get("title", ""),
+            "url": raw_url,
+            "deal_price": sale_price,
+            "original_price": original_price,
+            "discount_pct": discount_pct,
+            "condition": condition,
+            "image": card.get("image", ""),
+            "score": score,
+            "is_wootoff": is_wootoff,
+        })
+
+    return deals
+
+
+# ── Utility helpers ────────────────────────────────────────────────────────────
+
+def _guess_category(url: str) -> str:
+    u = url.lower()
+    if any(k in u for k in ("computer", "laptop", "monitor", "keyboard")):
+        return "computers"
+    if any(k in u for k in ("phone", "tablet", "ipad")):
+        return "tablets"
+    if any(k in u for k in ("gaming", "game", "console", "xbox", "playstation")):
+        return "gaming"
+    return "electronics"
+
+
 def _find_offer_list(obj, depth: int = 0) -> list:
-    """
-    Recursively walk the Next.js JSON blob looking for an array of offer dicts.
-    Returns the first array where items have both a title-like and price-like key.
-    """
-    if depth > 8:
+    if depth > 8 or not isinstance(obj, dict):
         return []
-    if isinstance(obj, dict):
-        for key in ("offers", "deals", "items", "products", "offerItems", "pageOffers"):
-            val = obj.get(key)
-            if isinstance(val, list) and val and _looks_like_offer_list(val):
-                return val
-        for v in obj.values():
-            result = _find_offer_list(v, depth + 1)
-            if result:
-                return result
-    elif isinstance(obj, list):
-        if _looks_like_offer_list(obj):
-            return obj
-        for item in obj:
-            result = _find_offer_list(item, depth + 1)
-            if result:
-                return result
+    for key in ("offers", "deals", "items", "products", "offerItems", "pageOffers"):
+        val = obj.get(key)
+        if isinstance(val, list) and val and _looks_like_offer_list(val):
+            return val
+    for v in obj.values():
+        if isinstance(v, (dict, list)):
+            r = _find_offer_list(v, depth + 1) if isinstance(v, dict) else (v if _looks_like_offer_list(v) else [])
+            if r:
+                return r
     return []
 
 
 def _looks_like_offer_list(lst: list) -> bool:
-    """Return True if the list looks like a list of product offer dicts."""
     if not lst or not isinstance(lst[0], dict):
         return False
     sample = lst[0]
@@ -318,141 +418,9 @@ def _looks_like_offer_list(lst: list) -> bool:
 
 
 def _coerce_price(val) -> float:
-    """Convert various price representations to float."""
     if val is None:
         return 0.0
     try:
         return float(str(val).replace("$", "").replace(",", "").strip())
     except (ValueError, TypeError):
         return 0.0
-
-
-def _parse_woot_html(soup: BeautifulSoup, is_wootoff: bool) -> list[dict]:
-    """CSS/article/link heuristic fallback when __NEXT_DATA__ is absent."""
-    deals: list[dict] = []
-
-    cards = (
-        soup.find_all("div", class_=re.compile(
-            r"item-main|moreFeed-item|offer-listing|deal-item|DealCard|dealCard", re.I
-        )) or
-        soup.find_all("article") or
-        soup.find_all("div", attrs={"data-offer-id": True})
-    )
-
-    if not cards:
-        links = soup.find_all("a", href=re.compile(
-            r"woot\.com/(?:\w+/)?(?:offers|products|deals)/", re.I
-        ))
-        seen_hrefs: set[str] = set()
-        for link in links:
-            href = link.get("href", "")
-            if href not in seen_hrefs:
-                seen_hrefs.add(href)
-                cards.append(link.find_parent("div") or link)
-
-    if not cards:
-        log.warning("[Woot] No deal cards found in HTML — page structure may have changed")
-        return []
-
-    log.debug("[Woot] HTML fallback found %d candidate cards", len(cards))
-    seen_urls: set[str] = set()
-
-    for card in cards:
-        link = (
-            card.find("a", href=re.compile(r"woot\.com/(?:\w+/)?(?:offers|products|deals)/")) or
-            card.find("a", href=re.compile(r"/(?:offers|products|deals)/"))
-        )
-        if not link:
-            continue
-        href = link.get("href", "")
-        url  = href if href.startswith("http") else f"https://www.woot.com{href}"
-        if not url or url in seen_urls:
-            continue
-        seen_urls.add(url)
-
-        title_tag = (
-            card.find(class_=re.compile(r"title|item-title|offer-title|product-name", re.I)) or
-            card.find("h2") or card.find("h3") or link
-        )
-        title = title_tag.get_text(strip=True)[:200] if title_tag else ""
-        if not title or len(title) < 5:
-            continue
-
-        original_price, deal_price = _extract_prices(card)
-        if not deal_price:
-            continue
-
-        discount_pct = (
-            (original_price - deal_price) / original_price * 100
-            if original_price and original_price > deal_price else 0.0
-        )
-
-        cond_match = re.search(
-            r"\b(New|Refurbished|Open Box|Like New|Used|Good|Acceptable)\b",
-            card.get_text(), re.I
-        )
-        condition = cond_match.group(1) if cond_match else ""
-        if condition.lower() in ("used", "acceptable", "good"):
-            continue
-
-        img   = card.find("img")
-        image = img.get("src", "") if img else ""
-
-        url_lower = url.lower()
-        category = (
-            "computers" if ("computer" in url_lower or "laptop" in url_lower) else
-            "tablets"   if ("phone" in url_lower or "tablet" in url_lower) else
-            "electronics"
-        )
-
-        score = calculate_deal_score(
-            discount_pct=discount_pct,
-            original_price=original_price or 0,
-            deal_price=deal_price,
-            category=category,
-        )
-
-        deals.append({
-            "title":          title,
-            "url":            url,
-            "deal_price":     deal_price,
-            "original_price": original_price,
-            "discount_pct":   discount_pct,
-            "condition":      condition,
-            "image":          image,
-            "score":          score,
-            "is_wootoff":     is_wootoff,
-        })
-
-    return deals
-
-
-def _extract_prices(card) -> tuple[float | None, float | None]:
-    """Return (original_price, deal_price) — highest and lowest price found in card."""
-    prices = []
-
-    for tag in card.find_all(class_=re.compile(r"price|Price")):
-        m = re.search(r"\$([\d,]+\.?\d*)", tag.get_text(strip=True))
-        if m:
-            try:
-                val = float(m.group(1).replace(",", ""))
-                if val > 0:
-                    prices.append(val)
-            except ValueError:
-                pass
-
-    if not prices:
-        for m in re.finditer(r"\$([\d,]+\.\d{2})", card.get_text()):
-            try:
-                val = float(m.group(1).replace(",", ""))
-                if val > 0:
-                    prices.append(val)
-            except ValueError:
-                pass
-
-    prices = sorted(set(prices), reverse=True)
-    if len(prices) >= 2:
-        return prices[0], prices[-1]
-    if len(prices) == 1:
-        return None, prices[0]
-    return None, None
