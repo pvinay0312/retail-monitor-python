@@ -173,6 +173,35 @@ class WootMonitor(BaseMonitor):
                     const results = [];
                     const seen = new Set();
 
+                    // Helper: parse a price string like "$9.99" or "$1,299" → float
+                    function parsePrice(txt) {
+                        if (!txt) return 0;
+                        const m = txt.match(/\$?([\d,]+\.?\d*)/);
+                        return m ? parseFloat(m[1].replace(/,/g, '')) : 0;
+                    }
+
+                    // Helper: extract sale price + list price from a card using
+                    // Woot's known CSS classes.  Falls back to regex on card text.
+                    function extractPrices(card) {
+                        // Woot uses span.price (current) and span.list-price (reference)
+                        const saleEl = card.querySelector('span.price');
+                        const listEl = card.querySelector('span.list-price');
+                        const sale   = saleEl ? parsePrice(saleEl.textContent) : 0;
+                        const list   = listEl ? parsePrice(listEl.textContent) : 0;
+                        if (sale > 0) {
+                            return list > sale ? [list, sale] : [sale];
+                        }
+                        // Fallback: regex on card text, but restrict to the card's
+                        // own price block element to avoid sibling card prices
+                        const priceBlock = card.querySelector(
+                            '[class*="price"],[class*="Price"],[data-testid*="price"]'
+                        );
+                        const src = priceBlock ? priceBlock.innerText : card.innerText;
+                        // Only take first 2 price-like matches to avoid sibling bleed
+                        const matches = (src.match(/\$[\d,]+\\.\\d{2}/g) || []).slice(0, 2);
+                        return matches.map(p => parseFloat(p.replace(/[\\$,]/g,''))).filter(p => p > 0);
+                    }
+
                     // Strategy 1: offer links
                     const offerLinks = document.querySelectorAll(
                         'a[href*="/offers/"], a[href*="woot.com/deals/"], a[href*="woot.com/products/"]'
@@ -183,18 +212,11 @@ class WootMonitor(BaseMonitor):
                         if (!href || seen.has(href)) continue;
                         seen.add(href);
 
-                        const card = link.closest('div, article, section, li') || link.parentElement || link;
-                        const txt  = card.innerText || '';
-
-                        // Prices: grab all $X.XX patterns
-                        const priceMatches = txt.match(/\$[\d,]+\\.\\d{2}/g) || [];
-                        const prices = priceMatches.map(p => parseFloat(p.replace(/[\\$,]/g, '')))
-                                                    .filter(p => p > 0);
-
-                        const title = extractTitle(card, link);
-                        const img   = card.querySelector('img');
-
-                        // Condition text
+                        const card  = link.closest('div, article, section, li') || link.parentElement || link;
+                        const txt   = card.innerText || '';
+                        const prices = extractPrices(card);
+                        const title  = extractTitle(card, link);
+                        const img    = card.querySelector('img');
                         const condMatch = txt.match(/\\b(New|Refurbished|Open Box|Like New)\\b/i);
 
                         if (title.length >= 5 && prices.length > 0) {
@@ -219,11 +241,9 @@ class WootMonitor(BaseMonitor):
                             const href = link.href;
                             if (!href || seen.has(href) || !href.includes('woot.com')) continue;
                             seen.add(href);
-                            const txt = card.innerText || '';
-                            const priceMatches = txt.match(/\$[\d,]+\\.\\d{2}/g) || [];
-                            const prices = priceMatches.map(p => parseFloat(p.replace(/[\\$,]/g,''))).filter(p=>p>0);
-                            const img   = card.querySelector('img');
-                            const title = extractTitle(card, link);
+                            const prices = extractPrices(card);
+                            const img    = card.querySelector('img');
+                            const title  = extractTitle(card, link);
                             if (title.length >= 5 && prices.length > 0) {
                                 results.push({ title: title.substring(0,200), url: href,
                                                prices, image: img ? img.src : '', condition: '' });

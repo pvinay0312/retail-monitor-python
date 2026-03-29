@@ -29,7 +29,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 import random
 import time
 from typing import Any
@@ -129,11 +128,10 @@ async def _launch_browser():
         from playwright.async_api import async_playwright  # type: ignore
         log.debug("[CookieManager] Using playwright (patchright not found)")
 
-    on_railway = bool(os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_SERVICE_ID"))
     p_ctx = async_playwright()
     p = await p_ctx.__aenter__()
     browser = await p.chromium.launch(
-        headless=on_railway,
+        headless=True,
         args=[
             "--no-sandbox",
             "--disable-dev-shm-usage",
