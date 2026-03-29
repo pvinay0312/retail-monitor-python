@@ -84,13 +84,15 @@ class NikeSnkrsMonitor(BaseMonitor):
         session = make_session("chrome110")
         try:
             objects = await self._fetch_feed(session)
+            # Snapshot of status BEFORE this cycle's updates — used for transition detection
+            prev_statuses = dict(status)
             if objects:
-                await self._process_feed(objects, seen, status, notify, drops, upcoming_seen, auto_styles)
+                await self._process_feed(objects, seen, status, notify, drops, upcoming_seen, auto_styles, prev_statuses)
 
             # Watchlist: filter the already-fetched feed objects client-side instead of
             # making individual API calls (Nike's filter=styleColor() is now INVALID_FILTER_FIELD)
             all_styles = list(set(NIKE_STYLE_CODES + list(auto_styles.keys())))
-            await self._check_watchlist(objects, status, notify, drops, upcoming_seen, auto_styles, all_styles)
+            await self._check_watchlist(objects, status, prev_statuses, notify, drops, upcoming_seen, auto_styles, all_styles)
 
             await self._send_day_before_reminders(drops, notify)
         finally:
@@ -121,7 +123,7 @@ class NikeSnkrsMonitor(BaseMonitor):
                 log.debug("[Nike] Feed error (%s): %s", feed_url, exc)
         return []
 
-    async def _process_feed(self, objects, seen, status, notify, drops, upcoming_seen, auto_styles) -> None:
+    async def _process_feed(self, objects, seen, status, notify, drops, upcoming_seen, auto_styles, prev_statuses) -> None:
         for obj in objects:
             publish = obj.get("publishedContent", {})
             props   = publish.get("properties", {})
@@ -161,11 +163,14 @@ class NikeSnkrsMonitor(BaseMonitor):
                     auto_styles[style] = {"title": title, "discovered": _iso_now()}
                     log.info("[Nike SNKRS] Auto-discovered style code: %s — %s", style, title)
 
-                prev    = status.get(key, "")
-                on_cool = (time.time() - notify.get(key, 0)) < NOTIFY_COOLDOWN
-                is_live = _is_live(launch_status, pi, props)
+                prev_status   = prev_statuses.get(key, "")
+                was_prev_live = prev_status in (AVAILABLE_STATUSES | {"ACTIVE"})
+                on_cool       = (time.time() - notify.get(key, 0)) < NOTIFY_COOLDOWN
+                is_live       = _is_live(launch_status, pi, props)
 
-                if is_live and not on_cool:
+                # Only fire when transitioning from non-live → live (prevents re-pinging
+                # items that stay ACTIVE/STOCKED across cycles once cooldown expires)
+                if is_live and not was_prev_live and not on_cool:
                     log.info("[Nike SNKRS] LIVE DROP: %s | %s | %s", title, style, price_str)
                     await send_nike_drop(
                         NIKE_SNKRS_WEBHOOK_URL,
@@ -202,7 +207,7 @@ class NikeSnkrsMonitor(BaseMonitor):
 
     # ── Watchlist ─────────────────────────────────────────────────────────────
 
-    async def _check_watchlist(self, objects: list, status, notify, drops, upcoming_seen, _auto_styles, all_styles) -> None:
+    async def _check_watchlist(self, objects: list, status, prev_statuses, notify, drops, upcoming_seen, _auto_styles, all_styles) -> None:
         """
         Client-side watchlist: filter already-fetched feed objects by style code.
 
@@ -254,13 +259,15 @@ class NikeSnkrsMonitor(BaseMonitor):
                     else f"https://www.nike.com/launch/t/{style_code.lower()}"
                 )
 
-                on_cool = (time.time() - notify.get(style_code, 0)) < NOTIFY_COOLDOWN
+                prev_status   = prev_statuses.get(style_code, "")
+                was_prev_live = prev_status in (AVAILABLE_STATUSES | {"ACTIVE"})
+                on_cool       = (time.time() - notify.get(style_code, 0)) < NOTIFY_COOLDOWN
 
                 log.info("[Nike SNKRS] Watchlist %s | %s | status=%s | sizes=%d",
                          style_code, title[:50], launch_status or "UNKNOWN", len(sizes))
 
                 is_live = _is_live(launch_status, pi, props)
-                if is_live and not on_cool:
+                if is_live and not was_prev_live and not on_cool:
                     log.info("[Nike SNKRS] WATCHLIST LIVE: %s | %s", style_code, title)
                     await send_nike_drop(
                         NIKE_SNKRS_WEBHOOK_URL,

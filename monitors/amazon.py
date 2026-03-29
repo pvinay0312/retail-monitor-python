@@ -164,12 +164,22 @@ class AmazonMonitor(BaseMonitor):
         has_coupon  = coupon_amount > 0
         big_drop    = discount_pct >= DEAL_THRESHOLD
 
-        cooldown_key = f"deal_{asin}"
-        on_cool = (time.time() - notify.get(cooldown_key, 0)) < DEAL_COOLDOWN
-        coupon_key = f"coupon_{asin}"
+        cooldown_key  = f"deal_{asin}"
+        price_key     = f"notified_price_{asin}"
+        coupon_key    = f"coupon_{asin}"
+        on_cool       = (time.time() - notify.get(cooldown_key, 0)) < DEAL_COOLDOWN
         on_coupon_cool = (time.time() - notify.get(coupon_key, 0)) < COUPON_COOLDOWN
 
-        if is_freebie or (big_drop and not on_cool) or (has_coupon and not on_coupon_cool):
+        # Only re-alert if the effective price dropped below the last notified price
+        # (prevents hourly re-pings for items that stay on sale at the same price)
+        last_notified_price = notify.get(price_key, float("inf"))
+        price_improved = effective_price < last_notified_price - 0.01
+
+        # Reset tracked price when item is no longer on deal so the next sale re-triggers
+        if not (is_freebie or big_drop or has_coupon):
+            notify.pop(price_key, None)
+
+        if is_freebie or (big_drop and price_improved and not on_cool) or (has_coupon and price_improved and not on_coupon_cool):
             pct_str = f"{discount_pct * 100:.0f}% off" if discount_pct > 0 else ""
             eff_str = f"${effective_price:.2f}" if has_coupon else price_str
 
@@ -191,6 +201,8 @@ class AmazonMonitor(BaseMonitor):
             )
             notify[cooldown_key]  = time.time()
             notify[coupon_key]    = time.time()
+            if not is_freebie:
+                notify[price_key] = effective_price
 
 
 # ── HTML extraction helpers ───────────────────────────────────────────────────
