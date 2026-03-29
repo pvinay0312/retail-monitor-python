@@ -154,10 +154,15 @@ class AmazonMonitor(BaseMonitor):
                     coupon_amount   = price * int(m_pct.group(1)) / 100
                     effective_price = price * (1 - int(m_pct.group(1)) / 100)
 
+        # Sanity check: was_price must be strictly higher than current price and
+        # no more than 10× it (avoids using an unrelated page price as "original")
+        if was_price and not (price < was_price <= price * 10):
+            was_price = None
+
         discount_pct = 0.0
         if was_price and was_price > 0:
             discount_pct = (was_price - effective_price) / was_price
-        elif prev_price and prev_price > 0:
+        elif prev_price and prev_price > 0 and prev_price > price:
             discount_pct = (prev_price - effective_price) / prev_price
 
         is_freebie  = effective_price <= 0.01
@@ -213,44 +218,86 @@ def _extract_name(soup: BeautifulSoup) -> str:
     return tag.get_text(strip=True)[:200] if tag else ""
 
 
-def _extract_price(soup: BeautifulSoup) -> float | None:
-    # Try primary price block
-    for sel in [
-        ("span", {"class": "a-price-whole"}),
-        ("span", {"id": "priceblock_ourprice"}),
-        ("span", {"id": "priceblock_dealprice"}),
-    ]:
-        tag = soup.find(*sel)
+def _price_container(soup: BeautifulSoup):
+    """Return the main product price section, scoped to avoid sidebar/comparison prices."""
+    for div_id in (
+        "corePriceDisplay_desktop_feature_div",
+        "apex_desktop",
+        "corePrice_desktop",
+        "price_inside_buybox",
+        "centerCol",          # wider fallback — still excludes right rail / footer
+    ):
+        tag = soup.find(id=div_id)
         if tag:
-            text = tag.get_text(strip=True).replace(",", "").replace("$", "")
-            # price-whole doesn't include cents; look for fraction sibling
-            frac = tag.find_next_sibling("span", class_="a-price-fraction")
+            return tag
+    return None
+
+
+def _parse_price_text(text: str) -> float | None:
+    text = text.replace(",", "").replace("$", "").strip().rstrip(".")
+    try:
+        return float(text)
+    except ValueError:
+        return None
+
+
+def _extract_price(soup: BeautifulSoup) -> float | None:
+    container = _price_container(soup)
+
+    # 1. a-offscreen spans hold the exact accessible price string ("$649.99")
+    #    and are always inside the correct price block
+    if container:
+        for span in container.find_all("span", class_="a-offscreen"):
+            v = _parse_price_text(span.get_text(strip=True))
+            if v and v > 0:
+                return v
+
+    # 2. Legacy price block IDs (older Amazon layout)
+    for pid in ("priceblock_ourprice", "priceblock_dealprice", "priceblock_saleprice"):
+        tag = soup.find("span", id=pid)
+        if tag:
+            v = _parse_price_text(tag.get_text(strip=True))
+            if v and v > 0:
+                return v
+
+    # 3. a-price-whole inside the container (no broad-page fallback)
+    if container:
+        whole = container.find("span", class_="a-price-whole")
+        if whole:
+            text = whole.get_text(strip=True)
+            frac = whole.find_next_sibling("span", class_="a-price-fraction")
             if frac:
                 text = text.rstrip(".") + "." + frac.get_text(strip=True)
-            try:
-                return float(text)
-            except ValueError:
-                pass
-    # Fallback: search for any dollar amount in the page
-    m = re.search(r'\$\s*([\d,]+\.\d{2})', soup.get_text())
-    if m:
-        try:
-            return float(m.group(1).replace(",", ""))
-        except ValueError:
-            pass
+            v = _parse_price_text(text)
+            if v and v > 0:
+                return v
+
+    # No broad regex fallback — avoids picking up sponsored / sidebar prices
     return None
 
 
 def _extract_was_price(soup: BeautifulSoup) -> float | None:
-    for cls in ["a-text-price", "a-text-strike"]:
-        tag = soup.find("span", class_=cls)
-        if tag:
-            m = re.search(r'[\d,.]+', tag.get_text())
-            if m:
-                try:
-                    return float(m.group(0).replace(",", ""))
-                except ValueError:
-                    pass
+    container = _price_container(soup)
+    if not container:
+        return None
+
+    # "Was" price appears as a struck-through a-text-price INSIDE the price block
+    for span in container.find_all("span", class_="a-text-price"):
+        text = span.get_text(strip=True)
+        m = re.search(r"[\d,.]+", text)
+        if m:
+            v = _parse_price_text(m.group(0))
+            if v and v > 0:
+                return v
+
+    # data-a-strike attribute (newer layout)
+    for span in container.find_all("span", attrs={"data-a-strike": "true"}):
+        m = re.search(r"[\d,.]+", span.get_text(strip=True))
+        if m:
+            v = _parse_price_text(m.group(0))
+            if v and v > 0:
+                return v
+
     return None
 
 
