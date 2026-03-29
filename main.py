@@ -86,6 +86,20 @@ async def _main() -> None:
     log = logging.getLogger(__name__)
     log.info("=== Retail Monitor starting ===")
 
+    loop = asyncio.get_running_loop()
+
+    def _shutdown(sig_name: str) -> None:
+        log.info("Received %s — cancelling tasks ...", sig_name)
+        for t in asyncio.all_tasks(loop):
+            t.cancel()
+
+    import signal
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        try:
+            loop.add_signal_handler(sig, _shutdown, sig.name)
+        except NotImplementedError:
+            pass  # Windows doesn't support add_signal_handler
+
     # Startup webhook audit — shows which channels are configured in Railway env vars
     from config.settings import (
         AMAZON_WEBHOOK_URL, BESTBUY_WEBHOOK_URL, WALMART_WEBHOOK_URL,
@@ -138,6 +152,6 @@ async def _main() -> None:
 if __name__ == "__main__":
     try:
         asyncio.run(_main())
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, asyncio.CancelledError):
         print("\nShutting down.")
         sys.exit(0)
