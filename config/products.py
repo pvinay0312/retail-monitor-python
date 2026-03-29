@@ -339,54 +339,46 @@ AMAZON_PRODUCTS = [
 BESTBUY_PRODUCTS = [
 
     # ── Gaming Consoles ───────────────────────────────────────────────────────
-    "https://www.bestbuy.com/site/sony-playstation-5-console/6523167.p",
-    "https://www.bestbuy.com/site/sony-playstation-5-digital-edition-console/6523168.p",
-    "https://www.bestbuy.com/site/sony-playstation-5-pro-console/6583138.p",             # PS5 Pro
+    "https://www.bestbuy.com/site/playstation-5-slim-console/6566039.p",                  # PS5 Slim Disc
+    "https://www.bestbuy.com/site/playstation-5-slim-console-digital-edition/6566040.p",  # PS5 Slim Digital
+    "https://www.bestbuy.com/site/playstation-5-pro-console/6601524.p",                   # PS5 Pro
     "https://www.bestbuy.com/site/microsoft-xbox-series-x-1tb-console/6428324.p",
-    "https://www.bestbuy.com/site/nintendo-switch-oled-model-with-white-joy-con/6470924.p",
-    "https://www.bestbuy.com/site/nintendo-switch-oled-model-w-neon-red-neon-blue-joy-con/6470925.p",
+    "https://www.bestbuy.com/site/nintendo-switch-oled-model-w-neon-red-neon-blue-joy-con/6470924.p",
     "https://www.bestbuy.com/site/nintendo-switch-2/6614313.p",
-    "https://www.bestbuy.com/site/meta-quest-3-128gb/6531587.p",
-    "https://www.bestbuy.com/site/meta-quest-3s-128gb/6570888.p",
+    "https://www.bestbuy.com/site/meta-quest-3s-128gb/6622623.p",                         # Meta Quest 3S (2025)
 
     # ── RTX 5090 / 5080 GPUs (most in-demand drops) ───────────────────────────
     "https://www.bestbuy.com/site/nvidia-geforce-rtx-5090-founders-edition/6614151.p",
     "https://www.bestbuy.com/site/nvidia-geforce-rtx-5080-founders-edition/6614153.p",
     "https://www.bestbuy.com/site/asus-rog-strix-geforce-rtx-5090/6614120.p",
     "https://www.bestbuy.com/site/msi-geforce-rtx-5090-gaming-x-trio/6616090.p",
-    # RTX 40-series (still active market)
-    "https://www.bestbuy.com/site/nvidia-geforce-rtx-4080-super-16gb-gddr6x/6570550.p",
-    "https://www.bestbuy.com/site/nvidia-geforce-rtx-4070-super-12gb-gddr6x/6570551.p",
-    "https://www.bestbuy.com/site/asus-geforce-rtx-4070-ti-super-16gb/6570315.p",
 
     # ── Pokemon TCG (Best Buy carries these — sell out fast) ──────────────────
-    "https://www.bestbuy.com/site/pokemon-prismatic-evolutions-elite-trainer-box/6606082.p",
+    # SKU 6606082 currently inactive — keeping placeholder for restock tracking
 
-    # ── LEGO Exclusives ───────────────────────────────────────────────────────
-    "https://www.bestbuy.com/site/lego-technic-bugatti-bolide-42151/6529527.p",
+    # ── LEGO ─────────────────────────────────────────────────────────────────
+    "https://www.bestbuy.com/site/lego-technic-lamborghini-huracan-tecnica-42161/6540666.p",
 
     # ── Apple ─────────────────────────────────────────────────────────────────
-    "https://www.bestbuy.com/site/apple-airpods-pro-2nd-generation-with-magsafe-case-usb%E2%80%91c/6447382.p",
-    "https://www.bestbuy.com/site/apple-airpods-4th-generation/6578852.p",
-    "https://www.bestbuy.com/site/apple-airpods-max-usb-c/6578545.p",
-    "https://www.bestbuy.com/site/apple-watch-series-10-gps-42mm-aluminum-case/6593286.p",
-    "https://www.bestbuy.com/site/apple-macbook-air-13-inch-laptop-apple-m3-chip-8gb-memory-256gb/6565837.p",
-    "https://www.bestbuy.com/site/apple-macbook-pro-14-inch-laptop-apple-m4-pro/6578533.p",
-    "https://www.bestbuy.com/site/apple-ipad-10th-generation-10-9-inch-64gb-wi-fi/6499637.p",
-    "https://www.bestbuy.com/site/apple-iphone-16-pro-max-512gb-natural-titanium/6443380.p",
+    "https://www.bestbuy.com/site/apple-airpods-pro-2nd-generation-with-magsafe-case-usb-c/6447382.p",
+    "https://www.bestbuy.com/site/apple-watch-series-10-gps-42mm/6572678.p",              # Apple Watch S10
+    "https://www.bestbuy.com/site/apple-macbook-air-13-inch-laptop-apple-m3/6565837.p",
+    "https://www.bestbuy.com/site/apple-macbook-pro-14-inch-laptop-apple-m4/6602743.p",   # MacBook Pro M4
+    "https://www.bestbuy.com/site/apple-ipad-air-11-inch-m2/6533554.p",                   # iPad Air M2
+    "https://www.bestbuy.com/site/apple-iphone-16-pro-max-512gb/6443380.p",
 
     # ── Headphones ────────────────────────────────────────────────────────────
-    "https://www.bestbuy.com/site/sony-wh-1000xm5-wireless-noise-canceling-over-ear-headphones/6505727.p",
-    "https://www.bestbuy.com/site/bose-quietcomfort-45-wireless-noise-cancelling-over-ear-headphones/6471291.p",
-    "https://www.bestbuy.com/site/samsung-galaxy-buds-fe-true-wireless-earbud-headphones/6543680.p",
+    "https://www.bestbuy.com/site/sony-wh-1000xm5-wireless-noise-canceling-headphones/6505727.p",
+    "https://www.bestbuy.com/site/bose-quietcomfort-ultra-wireless-noise-cancelling-headphones/6554464.p",  # QC Ultra (replaces QC45)
+    "https://www.bestbuy.com/site/samsung-galaxy-buds3-pro-wireless-earbud-headphones/6585614.p",          # Buds3 Pro (replaces Buds FE)
 
     # ── TVs ───────────────────────────────────────────────────────────────────
-    "https://www.bestbuy.com/site/samsung-65-class-the-frame-qled-4k-smart-tv/6401722.p",
-    "https://www.bestbuy.com/site/lg-55-class-c3-series-oled-evo-4k-uhd-smart-webos-tv/6535928.p",
+    "https://www.bestbuy.com/site/samsung-65-class-ls03d-the-frame-series-qled-4k-2024/6576593.p",  # Frame 2024
+    "https://www.bestbuy.com/site/lg-65-class-c4-series-oled-evo-4k-uhd-smart-webos-tv-2024/6578042.p",  # LG C4 (replaces C3)
     "https://www.bestbuy.com/site/tcl-55-class-q6-qled-4k-smart-google-tv/6543914.p",
 
     # ── Smart Home ────────────────────────────────────────────────────────────
-    "https://www.bestbuy.com/site/amazon-echo-dot-5th-gen-2022-release/6518518.p",
+    "https://www.bestbuy.com/site/amazon-echo-dot-5th-gen/6518518.p",
     "https://www.bestbuy.com/site/google-nest-thermostat/6429775.p",
     "https://www.bestbuy.com/site/ring-video-doorbell-wired/6427709.p",
 
@@ -400,26 +392,18 @@ BESTBUY_PRODUCTS = [
 
     # ── Gaming Accessories ────────────────────────────────────────────────────
     "https://www.bestbuy.com/site/xbox-wireless-controller-carbon-black/6430655.p",
-    "https://www.bestbuy.com/site/steelseries-arctis-nova-pro-wireless-gaming-headset/6502647.p",
-    "https://www.bestbuy.com/site/razer-blackshark-v2-pro-wireless-gaming-headset/6457401.p",
-    "https://www.bestbuy.com/site/nintendo-switch-pro-controller/6080398.p",
-
-    # ── Electric Bikes & Scooters ─────────────────────────────────────────────
-    "https://www.bestbuy.com/site/segway-ninebot-kickscooter-e2-plus/6507490.p",
-    "https://www.bestbuy.com/site/rad-power-bikes-radrunner-3-plus-electric-utility-bike/6571234.p",
+    "https://www.bestbuy.com/site/steelseries-arctis-nova-7-wireless-gaming-headset/6515802.p",  # Nova 7 (replaces Nova Pro)
+    "https://www.bestbuy.com/site/razer-blackshark-v2-pro-wireless-gaming-headset/6538210.p",    # V2 Pro 2023
+    "https://www.bestbuy.com/site/nintendo-switch-pro-controller/5748618.p",                     # new SKU
+    "https://www.bestbuy.com/site/sony-playstation-5-dualsense-wireless-controller-white/6430163.p",
 
     # ── Monitors & Displays ───────────────────────────────────────────────────
-    "https://www.bestbuy.com/site/lg-27-class-ultragear-qhd-ips-1ms-165hz-gaming-monitor/6524201.p",
-    "https://www.bestbuy.com/site/samsung-27-odyssey-g5-gaming-monitor/6401570.p",
-    "https://www.bestbuy.com/site/dell-27-gaming-monitor-s2722dgm/6457707.p",
+    "https://www.bestbuy.com/site/lg-ultragear-27-qhd-180hz-1ms-freesync-gaming-monitor/6593349.p",   # LG 27GS60QC
+    "https://www.bestbuy.com/site/samsung-odyssey-g6-27-curved-qhd-240hz-gaming-monitor/6522483.p",   # Samsung G6
 
     # ── Cameras & Drones ──────────────────────────────────────────────────────
     "https://www.bestbuy.com/site/dji-mini-4-pro-fly-more-combo-drone/6560191.p",
-    "https://www.bestbuy.com/site/gopro-hero12-black/6548994.p",
-
-    # ── Furniture & Home Office ───────────────────────────────────────────────
-    "https://www.bestbuy.com/site/insignia-adjustable-standing-desk/6502328.p",
-    "https://www.bestbuy.com/site/ergotron-lx-desk-mount-lcd-monitor-arm/4890920.p",
+    "https://www.bestbuy.com/site/gopro-hero13-black/6593210.p",                           # Hero13 (replaces Hero12)
 
 ]
 

@@ -116,14 +116,22 @@ class BestBuyMonitor(BaseMonitor):
         deals_found = restocks_found = checked = 0
 
         for item in data:
-            sku = str(item.get("sku", ""))
+            # API wraps each product under a "sku" key: {"sku": { <product dict> }}
+            product = item.get("sku", {})
+            if not isinstance(product, dict) or product.get("error"):
+                continue
+
+            sku         = str(product.get("skuId", ""))
             if not sku:
                 continue
             product_url = url_map.get(sku, f"https://www.bestbuy.com/site/p/{sku}.p")
-            name        = item.get("names", {}).get("title", "Unknown Product")
-            current     = item.get("priceBlock", {}).get("customerPrice", 0.0)
-            reg_price   = item.get("priceBlock", {}).get("regularPrice", 0.0)
-            purchasable = item.get("purchasable", False)
+            name        = product.get("names", {}).get("short", "Unknown Product")
+            price_data  = product.get("price", {})
+            price_dom   = price_data.get("priceDomain", {})
+            current     = price_data.get("currentPrice") or price_dom.get("customerPrice") or 0.0
+            reg_price   = price_dom.get("regularPrice", 0.0)
+            btn         = product.get("buttonState", {})
+            purchasable = btn.get("purchasable", False) or btn.get("buttonState") == "ADD_TO_CART"
 
             if not current:
                 continue

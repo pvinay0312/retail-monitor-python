@@ -1,22 +1,21 @@
 """
-Target monitor — uses Target's Redsky API for accurate pricing.
-Falls back to JSON-LD / __NEXT_DATA__ HTML scraping if the API fails.
+Target monitor — uses patchright browser to render each product page and
+intercept Target's internal Redsky API responses. Falls back to DOM extraction.
+
+Target migrated to full client-side rendering in 2025/2026; the public
+Redsky API key and the HTML JSON-LD approach no longer return product data.
 
 Alerts on ≥10% price drops and restocks.
 """
 from __future__ import annotations
 import asyncio
-import json
 import logging
 import re
 import time
 
-from bs4 import BeautifulSoup
-
 from config.products import TARGET_PRODUCTS
 from config.settings import TARGET_WEBHOOK_URL, TARGET_INTERVAL
 from monitors.base import BaseMonitor
-from utils.anti_bot import make_session, base_headers, random_ua
 from utils.discord_client import send_deal_alert, send_restock_alert
 from utils.storage import load, save
 
@@ -24,10 +23,6 @@ log = logging.getLogger(__name__)
 
 DEAL_THRESHOLD = 0.10   # 10% off
 DEAL_COOLDOWN  = 6 * 3600
-BOT_BACKOFF    = 2700   # 45 min
-
-REDSKY_KEY      = "9f36aeafbe60771e321a7cc95a78140772ab3e96"
-REDSKY_STORE_ID = "1108"
 
 _PRICES = "target_prices.json"
 _STOCK  = "target_stock.json"
@@ -58,18 +53,14 @@ class TargetMonitor(BaseMonitor):
 
         checked = deals_found = restocks_found = 0
 
-        session = make_session("chrome120")
-        try:
-            for url in TARGET_PRODUCTS:
-                result = await self._check_product(url, session, prices, stock, notify)
-                if result:
-                    c, d, r = result
-                    checked        += c
-                    deals_found    += d
-                    restocks_found += r
-                await asyncio.sleep(2)
-        finally:
-            await session.close()
+        for url in TARGET_PRODUCTS:
+            result = await self._check_product(url, prices, stock, notify)
+            if result:
+                c, d, r = result
+                checked        += c
+                deals_found    += d
+                restocks_found += r
+            await asyncio.sleep(2)
 
         await save(_PRICES, prices)
         await save(_STOCK,  stock)
@@ -77,17 +68,15 @@ class TargetMonitor(BaseMonitor):
         log.info("[Target] Cycle complete — %d/%d TCINs fetched | %d deals | %d restocks",
                  checked, len(TARGET_PRODUCTS), deals_found, restocks_found)
 
-    async def _check_product(self, url, session, prices, stock, notify) -> tuple[int, int, int] | None:
+    async def _check_product(self, url, prices, stock, notify) -> tuple[int, int, int] | None:
         """Returns (checked, deals_found, restocks_found) or None on parse failure."""
         tcin = _tcin(url)
         if not tcin:
             return None
 
-        product = await self._fetch_redsky(tcin, session)
+        product = await self._fetch_product(url, tcin)
         if not product:
-            product = await self._fetch_html(url, session)
-        if not product:
-            log.debug("[Target] No data for TCIN %s — Redsky and HTML both failed", tcin)
+            log.debug("[Target] No data for TCIN %s", tcin)
             return None
 
         name      = product.get("name", "Unknown")[:200]
@@ -149,130 +138,135 @@ class TargetMonitor(BaseMonitor):
 
     # ── Data sources ──────────────────────────────────────────────────────────
 
-    async def _fetch_redsky(self, tcin: str, session) -> dict | None:
-        api_url = (
-            f"https://redsky.target.com/redsky_aggregations/v1/web/pdp_client_v1"
-            f"?key={REDSKY_KEY}&tcin={tcin}&store_id={REDSKY_STORE_ID}&pricing_store_id={REDSKY_STORE_ID}"
-        )
-        ua = random_ua()
-        headers = base_headers(ua, referer="https://www.target.com/")
-        headers["Accept"] = "application/json"
-        try:
-            resp = await session.get(api_url, headers=headers, timeout=15)
-            if resp.status_code == 429:
-                self._blocked_until = time.time() + BOT_BACKOFF
-                return None
-            if resp.status_code in (401, 403):
-                log.warning("[Target] Redsky API key rejected (HTTP %d) for TCIN %s — key may be expired",
-                            resp.status_code, tcin)
-                return None
-            if resp.status_code != 200:
-                log.debug("[Target] Redsky HTTP %d for TCIN %s", resp.status_code, tcin)
-                return None
-            data = resp.json()
-            p = data.get("data", {}).get("product", {})
-            pricing = p.get("price", {})
-            inventory = p.get("inventory", {})
-            desc_node = p.get("item", {}).get("product_description", {})
-            name = desc_node.get("title", "")
-            price = pricing.get("current_retail")
-            was_price = pricing.get("reg_retail") or pricing.get("comparable_price")
-            in_stock = inventory.get("availability_status", "") in ("IN_STOCK", "AVAILABLE")
-            image_url = ""
-            imgs = p.get("item", {}).get("enrichment", {}).get("images", {})
-            if imgs:
-                image_url = imgs.get("base_url", "") + (imgs.get("primary_image_url") or "")
-            return {"name": name, "price": price, "was_price": was_price,
-                    "in_stock": in_stock, "image": image_url}
-        except Exception as exc:
-            log.debug("[Target] Redsky error for %s: %s", tcin, exc)
-            return None
+    async def _fetch_product(self, url: str, tcin: str) -> dict | None:
+        """Navigate to Target product page with patchright; intercept Redsky API or scrape DOM."""
+        from utils.playwright_session import _launch_browser
 
-    async def _fetch_html(self, url: str, session) -> dict | None:
-        ua = random_ua()
-        headers = base_headers(ua, referer="https://www.target.com/")
-        try:
-            resp = await session.get(url, headers=headers, timeout=20, allow_redirects=True)
-            if resp.status_code in (429, 503):
-                self._blocked_until = time.time() + BOT_BACKOFF
-                return None
-            if resp.status_code == 404:
-                tcin = _tcin(url)
-                log.debug("[Target] 404 for TCIN %s — product no longer exists", tcin)
-                return None
-            if resp.status_code != 200:
-                return None
-            soup = BeautifulSoup(resp.text, "lxml")
-            return _parse_target_html(soup)
-        except Exception as exc:
-            exc_str = str(exc)
-            # Target injects JS into some pages that raises "Assignment to constant
-            # variable" at runtime when parsed by BeautifulSoup / lxml.  This is a
-            # known non-actionable error for certain TCINs — log at debug level and
-            # skip rather than counting as a scrape error.
-            if "Assignment to constant variable" in exc_str or "assignment to constant" in exc_str.lower():
-                tcin = _tcin(url)
-                log.debug("[Target] JS constant-assignment error for TCIN %s — skipping", tcin)
-                return None
-            log.debug("[Target] HTML scrape error: %s", exc)
-            return None
+        p_ctx = browser = context = page = None
+        intercepted: dict | None = None
 
-
-def _parse_target_html(soup: BeautifulSoup) -> dict | None:
-    # Try JSON-LD structured data first
-    for tag in soup.find_all("script", type="application/ld+json"):
         try:
-            obj = json.loads(tag.string or "")
-            if isinstance(obj, list):
-                obj = next((x for x in obj if x.get("@type") == "Product"), {})
-            if obj.get("@type") == "Product":
-                offers = obj.get("offers", {})
-                if isinstance(offers, list):
-                    offers = offers[0] if offers else {}
-                price = offers.get("price")
-                name  = obj.get("name", "")
-                in_stock = "InStock" in offers.get("availability", "")
-                image = obj.get("image", "")
-                if isinstance(image, list):
-                    image = image[0] if image else ""
-                if price:
-                    return {"name": name, "price": float(price),
-                            "was_price": None, "in_stock": in_stock, "image": image}
-        except Exception:
-            pass
+            p_ctx, browser, context = await _launch_browser()
+            page = await context.new_page()
 
-    # Fallback: __NEXT_DATA__
-    tag = soup.find("script", id="__NEXT_DATA__")
-    if tag:
-        try:
-            raw = json.loads(tag.string or "")
-            product = _deep_find(raw, "name", "price")
-            if product:
-                return {
-                    "name":      product.get("name", ""),
-                    "price":     product.get("price"),
-                    "was_price": product.get("wasPrice"),
-                    "in_stock":  product.get("availabilityStatus", "") == "IN_STOCK",
-                    "image":     "",
+            async def _on_response(response) -> None:
+                nonlocal intercepted
+                url_r = response.url
+                if intercepted:
+                    return
+                # Intercept any Redsky/Target API response that has pricing data
+                if ("redsky.target.com" in url_r or "api.target.com" in url_r) and response.ok:
+                    try:
+                        data = await response.json()
+                        parsed = _parse_redsky_json(data)
+                        if parsed and parsed.get("price"):
+                            intercepted = parsed
+                            log.debug("[Target] Intercepted API for TCIN %s: %s", tcin, url_r[:80])
+                    except Exception:
+                        pass
+
+            page.on("response", _on_response)
+
+            log.debug("[Target] Navigating to %s", url)
+            try:
+                await page.goto(url, timeout=35_000, wait_until="networkidle")
+            except Exception:
+                try:
+                    await page.goto(url, timeout=35_000, wait_until="domcontentloaded")
+                    await asyncio.sleep(4)
+                except Exception as exc:
+                    log.warning("[Target] Navigation error for TCIN %s: %s", tcin, exc)
+                    return None
+
+            if intercepted:
+                return intercepted
+
+            # Fallback: extract from rendered DOM via JavaScript
+            result = await page.evaluate("""
+                () => {
+                    // Price: look for [data-test="product-price"] or schema.org
+                    const priceEl = document.querySelector('[data-test="product-price"]');
+                    const priceText = priceEl ? priceEl.textContent : '';
+                    const priceMatch = priceText.match(/\\$([\\d,]+\\.?\\d*)/);
+                    const price = priceMatch ? parseFloat(priceMatch[1].replace(/,/g,'')) : null;
+
+                    // Was-price (sale scenarios)
+                    const wasEl = document.querySelector('[data-test="product-regular-price"]');
+                    const wasText = wasEl ? wasEl.textContent : '';
+                    const wasMatch = wasText.match(/\\$([\\d,]+\\.?\\d*)/);
+                    const wasPrice = wasMatch ? parseFloat(wasMatch[1].replace(/,/g,'')) : null;
+
+                    // Title
+                    const h1 = document.querySelector('h1[data-test="product-title"]') ||
+                               document.querySelector('h1');
+                    const name = h1 ? h1.textContent.trim() : document.title;
+
+                    // Stock
+                    const body = document.body.innerText.toLowerCase();
+                    const outOfStock = body.includes('out of stock') ||
+                                       body.includes('sold out') ||
+                                       body.includes('temporarily out of stock');
+                    const inStock = !outOfStock && price !== null;
+
+                    // Image
+                    const img = document.querySelector('[data-test="product-image"] img') ||
+                                document.querySelector('img[alt][src*="target"]');
+                    const image = img ? img.src : '';
+
+                    return { name, price, wasPrice, inStock, image };
                 }
-        except Exception:
-            pass
-    return None
+            """)
+
+            if result and result.get("price"):
+                return {
+                    "name":      str(result.get("name", ""))[:200],
+                    "price":     float(result["price"]),
+                    "was_price": float(result["wasPrice"]) if result.get("wasPrice") else None,
+                    "in_stock":  bool(result.get("inStock", False)),
+                    "image":     str(result.get("image", "")),
+                }
+
+            log.debug("[Target] Could not extract price for TCIN %s from DOM", tcin)
+            return None
+
+        except Exception as exc:
+            log.warning("[Target] Browser error for TCIN %s: %s", tcin, exc)
+            return None
+        finally:
+            try:
+                if page:    await page.close()
+                if context: await context.close()
+                if browser: await browser.close()
+                if p_ctx:   await p_ctx.__aexit__(None, None, None)
+            except Exception:
+                pass
 
 
-def _deep_find(obj, *required_keys, depth: int = 0) -> dict | None:
-    if depth > 12:
+def _parse_redsky_json(data: dict) -> dict | None:
+    """Parse a Redsky/Target API JSON response intercepted from the browser."""
+    if not isinstance(data, dict):
         return None
-    if isinstance(obj, dict):
-        if all(k in obj for k in required_keys):
-            return obj
-        for v in obj.values():
-            r = _deep_find(v, *required_keys, depth=depth + 1)
-            if r:
-                return r
-    elif isinstance(obj, list):
-        for item in obj:
-            r = _deep_find(item, *required_keys, depth=depth + 1)
-            if r:
-                return r
-    return None
+    # Standard Redsky v1 shape: data.product.price / inventory / item
+    product = data.get("data", {}).get("product", {})
+    if not product:
+        return None
+    pricing   = product.get("price", {})
+    inventory = product.get("inventory", {})
+    desc      = product.get("item", {}).get("product_description", {})
+    name      = desc.get("title", "")
+    price     = pricing.get("current_retail") or pricing.get("formatted_current_price_type")
+    was_price = pricing.get("reg_retail") or pricing.get("comparable_price")
+    in_stock  = inventory.get("availability_status", "") in ("IN_STOCK", "AVAILABLE")
+    try:
+        price = float(str(price).replace("$", "").replace(",", "").strip()) if price else None
+        was_price = float(str(was_price).replace("$", "").replace(",", "").strip()) if was_price else None
+    except (ValueError, TypeError):
+        price = was_price = None
+    if not price:
+        return None
+    image_url = ""
+    imgs = product.get("item", {}).get("enrichment", {}).get("images", {})
+    if imgs:
+        image_url = imgs.get("base_url", "") + (imgs.get("primary_image_url") or "")
+    return {"name": name[:200], "price": price, "was_price": was_price,
+            "in_stock": in_stock, "image": image_url}
