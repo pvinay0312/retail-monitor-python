@@ -17,6 +17,7 @@ from config.products import TARGET_PRODUCTS
 from config.settings import TARGET_WEBHOOK_URL, TARGET_INTERVAL
 from monitors.base import BaseMonitor
 from utils.discord_client import send_deal_alert, send_restock_alert
+from utils.resale import resale_fields
 from utils.storage import load, save
 
 log = logging.getLogger(__name__)
@@ -101,10 +102,12 @@ class TargetMonitor(BaseMonitor):
         prev_oos_cnt  = stock.get(tcin, {}).get("oos_count", 0)
         if in_stock and not prev_in_stock and prev_oos_cnt >= 1:
             log.info("[Target] RESTOCK: %s", name)
+            extra_restock = [{"name": "🔑 TCIN", "value": tcin, "inline": True}]
+            extra_restock.extend(resale_fields(name, price))
             await send_restock_alert(
                 TARGET_WEBHOOK_URL, store="target",
                 name=name, url=url, price=price_str, image=image,
-                extra_fields=[{"name": "🔑 TCIN", "value": tcin, "inline": True}],
+                extra_fields=extra_restock,
             )
             restocks_found = 1
 
@@ -123,12 +126,14 @@ class TargetMonitor(BaseMonitor):
         if discount >= DEAL_THRESHOLD and not on_cool:
             pct_str = f"{discount * 100:.0f}% off"
             log.info("[Target] DEAL: %s | %s | %s", name, price_str, pct_str)
+            extra_deal = [{"name": "🔑 TCIN", "value": tcin, "inline": True}]
+            extra_deal.extend(resale_fields(name, price))
             await send_deal_alert(
                 TARGET_WEBHOOK_URL, store="target",
                 name=name, url=url,
                 price=price_str, original_price=was_str,
                 discount_pct=pct_str, image=image,
-                extra_fields=[{"name": "🔑 TCIN", "value": tcin, "inline": True}],
+                extra_fields=extra_deal,
             )
             notify[cooldown_key] = time.time()
             deals_found = 1

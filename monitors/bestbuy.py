@@ -16,6 +16,7 @@ from config.settings import BESTBUY_WEBHOOK_URL, BESTBUY_INTERVAL
 from monitors.base import BaseMonitor
 from utils.anti_bot import make_session, base_headers, random_ua
 from utils.discord_client import send_deal_alert, send_restock_alert
+from utils.resale import resale_fields
 from utils.storage import load, save
 
 log = logging.getLogger(__name__)
@@ -32,6 +33,12 @@ _NOTIFY = "bb_notify.json"
 def _sku(url: str) -> str:
     m = re.search(r"/(\d+)\.p", url)
     return m.group(1) if m else url
+
+
+def _image_url(sku: str) -> str:
+    """Construct Best Buy CDN image URL from SKU (pisces.bbystatic.com pattern)."""
+    prefix = sku[:4] if len(sku) >= 4 else sku
+    return f"https://pisces.bbystatic.com/image2/BestBuy_US/images/products/{prefix}/{sku}_sd.jpg"
 
 
 class BestBuyMonitor(BaseMonitor):
@@ -149,10 +156,13 @@ class BestBuyMonitor(BaseMonitor):
             prev_oos_cnt  = stock.get(sku, {}).get("oos_count", 0)
             if in_stock and not prev_in_stock and prev_oos_cnt >= 1:
                 log.info("[BestBuy] RESTOCK: %s", name)
+                extra_restock = [{"name": "🔑 SKU", "value": sku, "inline": True}]
+                extra_restock.extend(resale_fields(name, current))
                 await send_restock_alert(
                     BESTBUY_WEBHOOK_URL, store="bestbuy",
                     name=name, url=product_url, price=price_str,
-                    extra_fields=[{"name": "🔑 SKU", "value": sku, "inline": True}],
+                    image=_image_url(sku),
+                    extra_fields=extra_restock,
                 )
                 notify[f"restock_{sku}"] = time.time()
                 restocks_found += 1
@@ -175,12 +185,15 @@ class BestBuyMonitor(BaseMonitor):
             if discount >= DEAL_THRESHOLD and not on_cool:
                 pct_str = f"{discount * 100:.0f}% off"
                 log.info("[BestBuy] DEAL: %s | %s | %s", name, price_str, pct_str)
+                extra_deal = [{"name": "🔑 SKU", "value": sku, "inline": True}]
+                extra_deal.extend(resale_fields(name, current))
                 await send_deal_alert(
                     BESTBUY_WEBHOOK_URL, store="bestbuy",
                     name=name, url=product_url,
                     price=price_str, original_price=reg_str,
                     discount_pct=pct_str,
-                    extra_fields=[{"name": "🔑 SKU", "value": sku, "inline": True}],
+                    image=_image_url(sku),
+                    extra_fields=extra_deal,
                 )
                 notify[cooldown_key] = time.time()
                 deals_found += 1
