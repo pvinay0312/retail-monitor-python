@@ -349,12 +349,41 @@ def _extract_coupon(soup: BeautifulSoup) -> tuple[str, bool]:
 
 
 def _is_in_stock(soup: BeautifulSoup) -> bool:
+    _OOS = {
+        "currently unavailable",
+        "this item is unavailable",
+        "not available",
+        "out of stock",
+        "temporarily out of stock",
+    }
+    _IN = {"in stock", "in-stock", "ships from", "available to ship"}
+
+    # 1. #availability is the most reliable signal Amazon provides
     avail = soup.find("div", id="availability")
     if avail:
-        text = avail.get_text(strip=True).lower()
-        return "in stock" in text or "ships" in text
-    # If Add to Cart button exists, assume in stock
-    return bool(soup.find("input", id="add-to-cart-button"))
+        text = avail.get_text(" ", strip=True).lower()
+        if any(p in text for p in _OOS):
+            return False
+        if any(p in text for p in _IN):
+            return True
+        # div present but unclear (e.g. "Select a size") → fall through
+
+    # 2. Check the buybox area for OOS signals before trusting the button
+    for bid in ("buybox", "buying-options-form", "price_inside_buybox",
+                "desktop_buybox", "a-box-group"):
+        tag = soup.find(id=bid)
+        if tag:
+            bt = tag.get_text(" ", strip=True).lower()
+            if any(p in bt for p in _OOS):
+                return False
+            break
+
+    # 3. Add to Cart button is the strongest explicit positive signal
+    if soup.find("input", id="add-to-cart-button"):
+        return True
+
+    # 4. No Add to Cart and no clear stock signal → treat as unavailable
+    return False
 
 
 def _extract_image(soup: BeautifulSoup) -> str:
