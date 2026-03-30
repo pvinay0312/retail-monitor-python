@@ -176,26 +176,35 @@ class AmazonMonitor(BaseMonitor):
         has_coupon  = coupon_amount > 0
         big_drop    = discount_pct >= DEAL_THRESHOLD
 
-        cooldown_key  = f"deal_{asin}"
-        price_key     = f"notified_price_{asin}"
-        coupon_key    = f"coupon_{asin}"
-        on_cool       = (time.time() - notify.get(cooldown_key, 0)) < DEAL_COOLDOWN
+        cooldown_key   = f"deal_{asin}"
+        price_key      = f"notified_price_{asin}"
+        coupon_key     = f"coupon_{asin}"
+        on_cool        = (time.time() - notify.get(cooldown_key, 0)) < DEAL_COOLDOWN
         on_coupon_cool = (time.time() - notify.get(coupon_key, 0)) < COUPON_COOLDOWN
 
-        # Only re-alert if the effective price dropped below the last notified price
-        # (prevents hourly re-pings for items that stay on sale at the same price)
-        last_notified_price = notify.get(price_key, float("inf"))
-        price_improved = effective_price < last_notified_price - 0.01
+        # last_notified_price = the effective price when we last sent an alert.
+        # We only re-alert if price has dropped meaningfully below that anchor.
+        last_notified_price = notify.get(price_key)   # None = never alerted
 
-        # Reset tracked price only when the price has genuinely returned to near full price
-        # (avoids clearing dedup protection on cycles where was_price isn't returned by Amazon)
-        if not (is_freebie or big_drop or has_coupon):
-            if was_price and price >= was_price * 0.85:
-                notify.pop(price_key, None)
-            elif not was_price and prev_price and price >= prev_price * 0.92:
-                notify.pop(price_key, None)
+        # "Price improved" = dropped ≥5% AND ≥$5 below last notified price.
+        # Using a dual threshold avoids re-alerting on $0.10 price ticks.
+        if last_notified_price:
+            price_improved = (effective_price < last_notified_price * 0.95
+                              and effective_price < last_notified_price - 5.0)
+        else:
+            price_improved = True   # never alerted → always eligible
 
-        if is_freebie or (big_drop and price_improved and not on_cool) or (has_coupon and price_improved and not on_coupon_cool):
+        # Reset dedup tracking only when price clearly returned to full price.
+        # Anchor on last_notified_price (NOT prev_price — prev_price is updated
+        # every cycle so prev_price ≈ current price, making the reset fire constantly).
+        if last_notified_price and not (is_freebie or big_drop or has_coupon):
+            if effective_price > last_notified_price * 1.15:
+                # Price rose 15%+ above last notified — deal is over, reset
+                notify.pop(price_key,    None)
+                notify.pop(cooldown_key, None)
+                notify.pop(coupon_key,   None)
+
+        if is_freebie or (big_drop and (not last_notified_price or price_improved) and not on_cool) or (has_coupon and (not last_notified_price or price_improved) and not on_coupon_cool):
             pct_str = f"{discount_pct * 100:.0f}% off" if discount_pct > 0 else ""
             eff_str = f"${effective_price:.2f}" if has_coupon else price_str
 
