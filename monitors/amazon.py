@@ -139,8 +139,13 @@ class AmazonMonitor(BaseMonitor):
         # Skip price/deal detection when the item can't be purchased.
         # When unavailable, Amazon still renders the page with accessory prices
         # inside the same container — scraping those causes false deal alerts.
+        # Also clear any stale notify entries so the next genuine restock+deal
+        # fires cleanly rather than being blocked by an old cooldown.
         if not in_stock:
             log.debug("[Amazon] %s out of stock — skipping deal check", asin)
+            notify.pop(f"notified_price_{asin}", None)
+            notify.pop(f"deal_{asin}", None)
+            notify.pop(f"coupon_{asin}", None)
             return
 
         # ── Price-drop / coupon detection ─────────────────────────────────────
@@ -358,40 +363,76 @@ def _extract_coupon(soup: BeautifulSoup) -> tuple[str, bool]:
 
 
 def _is_in_stock(soup: BeautifulSoup) -> bool:
-    _OOS = {
+    """
+    Conservative stock check — returns False unless we see an explicit
+    in-stock signal. Amazon serves static HTML (no JS), so many divs are
+    empty or dynamic. Two key static OOS signals:
+      • div#outOfStock   — "Currently unavailable" box, always static
+      • div#availability — may be empty (dynamic); if non-empty, trust it
+    """
+    _OOS_PHRASES = (
         "currently unavailable",
         "this item is unavailable",
         "not available",
         "out of stock",
         "temporarily out of stock",
-    }
-    _IN = {"in stock", "in-stock", "ships from", "available to ship"}
+        "see all buying options",        # no direct stock, 3P sellers only
+        "available from these sellers",  # same
+        "we don't know when or if",
+    )
+    _IN_PHRASES = (
+        "in stock",
+        "in-stock",
+        "ships from",
+        "available to ship",
+        "usually ships",
+        "get it as soon as",
+    )
 
-    # 1. #availability is the most reliable signal Amazon provides
+    # 1. div#outOfStock is the most reliable static OOS signal on Amazon.
+    #    When present and non-empty, the item is definitively unavailable.
+    oos_box = soup.find("div", id="outOfStock")
+    if oos_box and oos_box.get_text(strip=True):
+        log.debug("[Amazon] _is_in_stock: outOfStock div present → OOS")
+        return False
+
+    # 2. div#availability may be populated in static HTML on some page types.
+    #    If it has content, trust it; if empty (dynamic), skip it entirely.
     avail = soup.find("div", id="availability")
     if avail:
         text = avail.get_text(" ", strip=True).lower()
-        if any(p in text for p in _OOS):
-            return False
-        if any(p in text for p in _IN):
-            return True
-        # div present but unclear (e.g. "Select a size") → fall through
-
-    # 2. Check the buybox area for OOS signals before trusting the button
-    for bid in ("buybox", "buying-options-form", "price_inside_buybox",
-                "desktop_buybox", "a-box-group"):
-        tag = soup.find(id=bid)
-        if tag:
-            bt = tag.get_text(" ", strip=True).lower()
-            if any(p in bt for p in _OOS):
+        if text:
+            if any(p in text for p in _OOS_PHRASES):
+                log.debug("[Amazon] _is_in_stock: #availability OOS phrase → OOS")
                 return False
-            break
+            if any(p in text for p in _IN_PHRASES):
+                log.debug("[Amazon] _is_in_stock: #availability IN phrase → in stock")
+                return True
+            # Non-empty but unrecognised text (e.g. "Select a configuration")
+            # → conservatively treat as OOS
+            log.debug("[Amazon] _is_in_stock: #availability ambiguous '%s' → OOS", text[:60])
+            return False
+        # Empty div (content loads via JS) — fall through to button check
 
-    # 3. Add to Cart button is the strongest explicit positive signal
-    if soup.find("input", id="add-to-cart-button"):
-        return True
+    # 3. Add to Cart button in the main buybox is the clearest positive signal.
+    #    Only trust it when it lives inside a recognised buybox container —
+    #    NOT a page-wide search (3P seller sections also have this button).
+    for buybox_id in ("buyBoxAccordion", "desktop_buybox", "newAccordionRow",
+                      "addToCart_feature_div", "add-to-cart-button"):
+        container = soup.find(id=buybox_id)
+        if container:
+            # If the buybox itself mentions OOS, stop immediately
+            bt = container.get_text(" ", strip=True).lower()
+            if any(p in bt for p in _OOS_PHRASES):
+                log.debug("[Amazon] _is_in_stock: buybox OOS phrase → OOS")
+                return False
+            if container.find("input", id="add-to-cart-button"):
+                log.debug("[Amazon] _is_in_stock: add-to-cart in buybox → in stock")
+                return True
+            break   # found the buybox but no cart button — OOS
 
-    # 4. No Add to Cart and no clear stock signal → treat as unavailable
+    # 4. No definitive signal found → conservative default: treat as OOS
+    log.debug("[Amazon] _is_in_stock: no signal found → OOS (conservative default)")
     return False
 
 
