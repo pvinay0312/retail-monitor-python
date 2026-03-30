@@ -9,3 +9,4 @@ node_modules/
 logs/
 .DS_Store
 set_railway_vars.sh
+.venv/

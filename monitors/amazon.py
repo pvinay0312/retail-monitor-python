@@ -28,9 +28,9 @@ log = logging.getLogger(__name__)
 
 DEAL_THRESHOLD   = 0.15   # 15% off triggers a deal alert
 COUPON_THRESHOLD = 0.01   # any coupon triggers an alert
-DEAL_COOLDOWN    = 3600   # 1 hour
-COUPON_COOLDOWN  = 1800   # 30 min
-CAPTCHA_BACKOFF  = 7200   # 2 hours if CAPTCHA detected
+DEAL_COOLDOWN    = 6 * 3600   # 6 hours — prevents re-pinging same deal each cycle
+COUPON_COOLDOWN  = 4 * 3600   # 4 hours
+CAPTCHA_BACKOFF  = 7200        # 2 hours if CAPTCHA detected
 
 CAPTCHA_TITLES   = {"robot check", "captcha", "sorry!", "we're sorry"}
 
@@ -187,9 +187,13 @@ class AmazonMonitor(BaseMonitor):
         last_notified_price = notify.get(price_key, float("inf"))
         price_improved = effective_price < last_notified_price - 0.01
 
-        # Reset tracked price when item is no longer on deal so the next sale re-triggers
+        # Reset tracked price only when the price has genuinely returned to near full price
+        # (avoids clearing dedup protection on cycles where was_price isn't returned by Amazon)
         if not (is_freebie or big_drop or has_coupon):
-            notify.pop(price_key, None)
+            if was_price and price >= was_price * 0.85:
+                notify.pop(price_key, None)
+            elif not was_price and prev_price and price >= prev_price * 0.92:
+                notify.pop(price_key, None)
 
         if is_freebie or (big_drop and price_improved and not on_cool) or (has_coupon and price_improved and not on_coupon_cool):
             pct_str = f"{discount_pct * 100:.0f}% off" if discount_pct > 0 else ""

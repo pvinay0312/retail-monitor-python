@@ -31,7 +31,7 @@ from utils.storage import load, save
 
 log = logging.getLogger(__name__)
 
-DEAL_COOLDOWN = 3600   # 1 hour per item URL
+DEAL_COOLDOWN = 8 * 3600   # 8 hours — Woot deals last days, avoid repeat pings
 _NOTIFY       = "woot_notify.json"
 
 # Woot category pages (correct URLs as of 2026)
