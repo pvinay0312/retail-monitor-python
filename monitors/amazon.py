@@ -1,11 +1,24 @@
 """
-Amazon monitor — detects coupon codes, price drops (≥15% off), freebies, and restocks.
+Amazon monitor — detects coupon codes, price drops (≥20% off + ≥$15 saved),
+freebies, and restocks.
 
 Anti-bot strategy:
   • curl_cffi with Chrome TLS impersonation (JA3/JA4 fingerprint matches Chrome)
   • Rotating user-agents
   • 2-hour backoff on CAPTCHA detection to prevent IP banning
   • Realistic sec-ch-ua and Sec-Fetch-* headers
+
+Dedup strategy (belt + suspenders):
+  • price_key  — stores the effective price at last alert; never re-alerts at
+                 the same price. Cleared only when item goes OOS.
+  • cooldown   — 12h hard block regardless of price (prevents rapid re-fire)
+  • price_improved — re-alert only if price drops ≥10% AND ≥$20 below anchor
+
+Cook-group thresholds (industry standard):
+  • 20% minimum discount (was 15% — too noisy)
+  • $15 minimum absolute savings (eliminates cheap-item noise)
+  • Any coupon worth ≥$5 or ≥10% off always alerts
+  • Freebies ($0) always alert with no threshold
 """
 from __future__ import annotations
 import asyncio
@@ -22,15 +35,18 @@ from monitors.base import BaseMonitor
 from utils.anti_bot import make_session, base_headers, random_ua
 from utils.affiliate import make_affiliate_url
 from utils.discord_client import send_deal_alert, send_restock_alert
-from utils.storage import load, save, is_on_cooldown, mark_notified
+from utils.storage import load, save
 
 log = logging.getLogger(__name__)
 
-DEAL_THRESHOLD   = 0.15   # 15% off triggers a deal alert
-COUPON_THRESHOLD = 0.01   # any coupon triggers an alert
-DEAL_COOLDOWN    = 6 * 3600   # 6 hours — prevents re-pinging same deal each cycle
-COUPON_COOLDOWN  = 4 * 3600   # 4 hours
+DEAL_THRESHOLD   = 0.20        # 20% off minimum (industry standard for cook groups)
+MIN_SAVINGS      = 15.0        # must save at least $15 — filters cheap-item noise
+DEAL_COOLDOWN    = 12 * 3600   # 12h hard block after any alert
 CAPTCHA_BACKOFF  = 7200        # 2 hours if CAPTCHA detected
+
+# Coupon: alert if saving ≥$5 OR ≥10% off (regardless of DEAL_THRESHOLD)
+COUPON_MIN_AMOUNT = 5.0
+COUPON_MIN_PCT    = 0.10
 
 CAPTCHA_TITLES   = {"robot check", "captcha", "sorry!", "we're sorry"}
 
@@ -177,44 +193,41 @@ class AmazonMonitor(BaseMonitor):
         elif prev_price and prev_price > 0 and prev_price > price:
             discount_pct = (prev_price - effective_price) / prev_price
 
-        is_freebie  = effective_price <= 0.01
-        has_coupon  = coupon_amount > 0
-        big_drop    = discount_pct >= DEAL_THRESHOLD
+        absolute_savings = (was_price - effective_price) if was_price else 0.0
+        is_freebie       = effective_price <= 0.01
+        big_drop         = (discount_pct >= DEAL_THRESHOLD
+                            and absolute_savings >= MIN_SAVINGS)
+        # Coupon: alert if saving ≥$5 OR ≥10% off (regardless of big_drop threshold)
+        good_coupon      = (coupon_amount >= COUPON_MIN_AMOUNT
+                            or (coupon_amount > 0 and discount_pct >= COUPON_MIN_PCT))
+        has_coupon       = coupon_amount > 0 and good_coupon
 
-        cooldown_key   = f"deal_{asin}"
-        price_key      = f"notified_price_{asin}"
-        coupon_key     = f"coupon_{asin}"
-        on_cool        = (time.time() - notify.get(cooldown_key, 0)) < DEAL_COOLDOWN
-        on_coupon_cool = (time.time() - notify.get(coupon_key, 0)) < COUPON_COOLDOWN
-
-        # last_notified_price = the effective price when we last sent an alert.
-        # We only re-alert if price has dropped meaningfully below that anchor.
+        cooldown_key        = f"deal_{asin}"
+        price_key           = f"notified_price_{asin}"
+        on_cool             = (time.time() - notify.get(cooldown_key, 0)) < DEAL_COOLDOWN
         last_notified_price = notify.get(price_key)   # None = never alerted
 
-        # "Price improved" = dropped ≥5% AND ≥$5 below last notified price.
-        # Using a dual threshold avoids re-alerting on $0.10 price ticks.
+        # Re-alert only if effective price dropped ≥10% AND ≥$20 below last anchor.
+        # This is the ONLY re-fire gate — the 12h cooldown handles the rest.
+        # dedup anchor is ONLY cleared when item goes OOS (done above), never here.
         if last_notified_price:
-            price_improved = (effective_price < last_notified_price * 0.95
-                              and effective_price < last_notified_price - 5.0)
+            price_improved = (effective_price < last_notified_price * 0.90
+                              and effective_price < last_notified_price - 20.0)
         else:
-            price_improved = True   # never alerted → always eligible
+            price_improved = True   # never alerted for this ASIN → always eligible
 
-        # Reset dedup tracking only when price clearly returned to full price.
-        # Anchor on last_notified_price (NOT prev_price — prev_price is updated
-        # every cycle so prev_price ≈ current price, making the reset fire constantly).
-        if last_notified_price and not (is_freebie or big_drop or has_coupon):
-            if effective_price > last_notified_price * 1.15:
-                # Price rose 15%+ above last notified — deal is over, reset
-                notify.pop(price_key,    None)
-                notify.pop(cooldown_key, None)
-                notify.pop(coupon_key,   None)
+        should_alert = (
+            is_freebie
+            or ((big_drop or has_coupon) and price_improved and not on_cool)
+        )
 
-        if is_freebie or (big_drop and (not last_notified_price or price_improved) and not on_cool) or (has_coupon and (not last_notified_price or price_improved) and not on_coupon_cool):
+        if should_alert:
             pct_str = f"{discount_pct * 100:.0f}% off" if discount_pct > 0 else ""
             eff_str = f"${effective_price:.2f}" if has_coupon else price_str
+            savings_str = f"${absolute_savings:.2f}" if absolute_savings >= 1 else ""
 
-            log.info("[Amazon] DEAL: %s | %s | coupon=%s | pct=%.0f%%",
-                     name, eff_str, coupon_text or "—", discount_pct * 100)
+            log.info("[Amazon] DEAL: %s | %s | coupon=%s | pct=%.0f%% | saved=%s",
+                     name, eff_str, coupon_text or "—", discount_pct * 100, savings_str)
 
             await send_deal_alert(
                 AMAZON_WEBHOOK_URL,
@@ -230,8 +243,7 @@ class AmazonMonitor(BaseMonitor):
                 is_freebie=is_freebie,
                 extra_fields=[{"name": "🔑 ASIN", "value": asin, "inline": True}],
             )
-            notify[cooldown_key]  = time.time()
-            notify[coupon_key]    = time.time()
+            notify[cooldown_key] = time.time()
             if not is_freebie:
                 notify[price_key] = effective_price
 
