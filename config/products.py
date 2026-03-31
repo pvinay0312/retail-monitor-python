@@ -12,7 +12,7 @@ Philosophy:
 # ── Amazon ────────────────────────────────────────────────────────────────────
 AMAZON_PRODUCTS = [
 
-    # ── TVs ──────────────────────────────────────────────────────────────────
+    # ── TVs ────────────────────────────────────────────────────���───────────���─
     "https://www.amazon.com/introducing-amazon-fire-tv-55-inch-omni-qled-series-smart-tv/dp/B09N6ZRH6C",
     "https://www.amazon.com/amazon-fire-tv-55-inch-omni-mini-led-series-smart-tv/dp/B0C7SRHGXF",
     "https://www.amazon.com/TCL-Class-QLED-Smart-Google/dp/B0B52PSLN4",
@@ -30,15 +30,15 @@ AMAZON_PRODUCTS = [
     "https://www.amazon.com/Bose-QuietComfort-Earbuds-Wireless/dp/B08WM3GJ5Z",
 
     # ── AirPods / Apple Audio ─────────────────────────────────────────────────
-    "https://www.amazon.com/Apple-Generation-Cancelling-Transparency-Personalized/dp/B0CHWRXH8B",
-    "https://www.amazon.com/Apple-AirPods-Charging-Released-2019/dp/B07PXGQC1Q",
+    "https://www.amazon.com/Apple-Generation-Cancelling-Transparency-Personalized/dp/B0CHWRXH8B",  # AirPods Pro 2
+    "https://www.amazon.com/dp/B0DKXLQFP5",   # AirPods 4 ANC — launched Oct 2024, frequent 20-25% lightning deals
     "https://www.amazon.com/Apple-AirPods-Max-Wireless-Headphones/dp/B0CHX2DWWR",  # AirPods Max USB-C
 
-    # ── Smartwatches ─────────────────────────────────────────────────────────
+    # ── Smartwatches ─────────────────────────────────────────��───────────────
     "https://www.amazon.com/Apple-Watch-Smartwatch-Aluminium-Always/dp/B0DGHQ2QH6",
     "https://www.amazon.com/Apple-Watch-Smartwatch-Aluminium-Always/dp/B0DGJ5KQL7",
 
-    # ── Speakers ─────────────────────────────────────────────────────────────
+    # ── Speakers ���──────────────────────────────────────────────���─────────────
     "https://www.amazon.com/Amazon-vibrant-helpful-routines-Charcoal/dp/B09B8V1LZ3",
     "https://www.amazon.com/Amazon-release-vibrant-helpful-routines/dp/B09B94RL1R",
     "https://www.amazon.com/JBL-Flip-Waterproof-Bluetooth-Speaker/dp/B09XDB73CX",
@@ -70,6 +70,11 @@ AMAZON_PRODUCTS = [
     "https://www.amazon.com/MSI-GeForce-5090-Gaming-Trio/dp/B0DT6Q3BXM",                  # MSI RTX 5090 Gaming Trio OC
     "https://www.amazon.com/ASUS-Graphics-3-8-Slot-Axial-tech-Phase-Change/dp/B0DQSD7YQC", # ASUS ROG Astral RTX 5080 OC
     "https://www.amazon.com/GIGABYTE-Graphics-WINDFORCE-GV-N5080GAMING-OC-16GD/dp/B0DS2R6948", # Gigabyte RTX 5080 Gaming OC
+    "https://www.amazon.com/dp/B0DWH2F2C5",   # ASUS ROG Astral RTX 5070 Ti OC — $749 MSRP, flips $900-1,100
+    "https://www.amazon.com/dp/B0DWNTJHKQ",   # MSI RTX 5070 Ti Gaming X Trio
+    # AMD RX 9070 XT — best value GPU 2025, $599 MSRP
+    "https://www.amazon.com/dp/B0DWB7BPQ8",   # Sapphire Nitro+ RX 9070 XT
+    "https://www.amazon.com/dp/B0DWK4Y6HB",   # Asus TUF RX 9070 XT OC
     # RTX 40-series (still highly liquid)
     "https://www.amazon.com/ASUS-GeForce-DisplayPort-Axial-tech-Technology/dp/B0CNBGFQWG",
     "https://www.amazon.com/MSI-RTX-4070-GAMING-16G/dp/B0CNQKSFXR",
@@ -78,8 +83,11 @@ AMAZON_PRODUCTS = [
     "https://www.amazon.com/PlayStation-5-Console-CFI-2015A01X/dp/B0CL5KNB9M",
     "https://www.amazon.com/PlayStation-5-Pro-Console/dp/B0CZG7H7XX",           # PS5 Pro
     "https://www.amazon.com/Nintendo-Switch-OLED-Model-Neon-Joy/dp/B098RL6SBJ",
-    "https://www.amazon.com/Nintendo-Switch-OLED-Model-White-Joy/dp/B098BKLHBJ",
     "https://www.amazon.com/dp/B0F3GWXLTS",                                     # Nintendo Switch 2
+    "https://www.amazon.com/dp/B0F3GX7L9T",                                     # NS2 Mario Kart World Bundle
+    "https://www.amazon.com/dp/B0F3GXB5QR",                                     # Nintendo Switch 2 Joy-Con 2 (Neon)
+    "https://www.amazon.com/dp/B0F3GXLKNQ",                                     # Nintendo Switch 2 Pro Controller
+    "https://www.amazon.com/dp/B0F5SXD2MQ",                                     # Samsung 256GB microSD Express (NS2 official)
     "https://www.amazon.com/Xbox-Series-S-Robot-White/dp/B08G9J44ZN",
 
     # ── Gaming Controllers / Peripherals ─────────────────────────────────────
@@ -98,13 +106,17 @@ AMAZON_PRODUCTS = [
     "https://www.amazon.com/dp/B0BPZFB8R2",   # Pokemon TCG 151 Ultra Premium Collection
     "https://www.amazon.com/dp/B0CHW6LZ7T",   # Pokemon Scarlet Violet Booster Bundle
     "https://www.amazon.com/dp/B0CVJM31VJ",   # Pokemon Temporal Forces Elite Trainer Box
+    "https://www.amazon.com/dp/B0F1KBMG8H",   # Pokemon TCG Destined Rivals ETB (May 30, 2025) — Mewtwo ex SIR $500+
+    "https://www.amazon.com/dp/B0F8NQKXZQ",   # Pokemon Mega Evolution Ascended Heroes ETB (Jan 2026) — Mega Charizard X chase
 
-    # ── LEGO Exclusives (Icons, Technic, Star Wars) ──────────────────────────
+    # ── LEGO Exclusives (Icons, Technic, Botanicals, Star Wars) ─────────────
     "https://www.amazon.com/LEGO-Icons-Eiffel-Tower-10307/dp/B0BFJ11DXN",
     "https://www.amazon.com/LEGO-Technic-Bugatti-Bolide-42151/dp/B0BF3V2T8P",
     "https://www.amazon.com/LEGO-Icons-Wildflower-Bouquet-10313/dp/B09JWST8KX",
     "https://www.amazon.com/LEGO-Icons-Succulents-10309/dp/B09JWTD7PQ",
     "https://www.amazon.com/LEGO-Star-Wars-Millennium-75375/dp/B0CQTW7RDZ",
+    "https://www.amazon.com/dp/B0D9V5C9CX",   # LEGO Botanicals Japanese Red Maple Bonsai 10348 (Jun 2025)
+    "https://www.amazon.com/dp/B0D9V5CPC2",   # LEGO Botanicals Hibiscus Flower 10372 (Summer 2025)
 
     # ── Sneakers on Amazon (discount/restock potential) ───────────────────────
     "https://www.amazon.com/Nike-FB2207-Mens-Running-Shoe/dp/B0DHQ467TR",
@@ -134,10 +146,7 @@ AMAZON_PRODUCTS = [
     "https://www.amazon.com/uni-USB-C-Hub-Adapter/dp/B075XNWRQX",
 
     # ── Phone Cases ──────────────────────────────────────────────────────────
-    "https://www.amazon.com/Spigen-Rugged-Armor-Designed-iPhone/dp/B0CKWN5K66",
-    "https://www.amazon.com/TORRAS-Compatible-iPhone-15-Case/dp/B0C7GP2Q3D",
-    "https://www.amazon.com/Mophie-juice-pack-Wireless-Compatible/dp/B09Y26QK3H",
-    "https://www.amazon.com/PopSockets-PopGrip-Swappable-Phones-Tablets/dp/B075YG3931",
+    # (removed — always available, never hit 20%+$15 threshold)
 
     # ── Storage — SD Cards / Flash ────────────────────────────────────────────
     "https://www.amazon.com/SanDisk-Ultra-MicroSDXC-Memory-Adapter/dp/B08GY9NYRM",
@@ -202,6 +211,7 @@ AMAZON_PRODUCTS = [
 
     # ── Cameras & Drones ─────────────────────────────────────────────────────
     "https://www.amazon.com/DJI-Mini-4-Pro-Drone/dp/B0CF9GQMJP",
+    "https://www.amazon.com/dp/B0CX2VJZR8",   # DJI Neo — $199 budget drone, massive creator demand, coupons 15-20% off
     "https://www.amazon.com/GoPro-HERO12-Black-Waterproof-Stabilization/dp/B0CDP3XGHQ",
     "https://www.amazon.com/Canon-EOS-Rebel-SL3-Video/dp/B07MV3P7M8",
     "https://www.amazon.com/Sony-Full-Frame-Mirrorless-Interchangeable/dp/B09BBGPTLG",
@@ -239,10 +249,6 @@ AMAZON_PRODUCTS = [
     "https://www.amazon.com/Anker-Roav-DashCam-Nighthawk-Stabilization/dp/B06XSVTJQP",
     "https://www.amazon.com/NOCO-Boost-Plus-GB40-1000Amp/dp/B015TKUPIC",
     "https://www.amazon.com/Garmin-DriveSmart-Bluetooth-Optional/dp/B07R7K9TH2",
-    "https://www.amazon.com/VIOFO-A119-MINI-2-Dash-Cam/dp/B09FJBKXNL",
-    "https://www.amazon.com/Car-Phone-Mount-Holder-Dashboard/dp/B08FQTKXSX",
-    "https://www.amazon.com/Chemical-Guys-CWS_301_16-Extreme-Cleanser/dp/B00FMJNGK6",
-    "https://www.amazon.com/Meguiars-G7014J-Gold-Class-Carnauba/dp/B0000AY0KX",
 
     # ── Air Purifiers / Home Climate ──────────────────────────────────────────
     "https://www.amazon.com/LEVOIT-Purifiers-Cleaner-Filtration-Eliminators/dp/B07D8TQN68",
@@ -269,69 +275,9 @@ AMAZON_PRODUCTS = [
     "https://www.amazon.com/Oral-B-1000-Rechargeable-Electric-Toothbrush/dp/B003UKM9CO",
     "https://www.amazon.com/Gillette-Fusion5-Razor-Blade-Refills/dp/B01N5TCKZF",
 
-    # ── Home Décor / Bedding ──────────────────────────────────────────────────
-    "https://www.amazon.com/Beckham-Hotel-Collection-Gel-Pillows/dp/B01LYNW421",
-    "https://www.amazon.com/SLEEP-ZONE-Cooling-Comforter-Machine/dp/B08CJKD8LZ",
-    "https://www.amazon.com/Amazon-Basics-Lightweight-Microfiber-Sheet/dp/B0777YMY89",
-    "https://www.amazon.com/Mellanni-Bed-Sheet-Set-Full/dp/B01IB09K7Y",
-    "https://www.amazon.com/TOPRUUG-Washable-Oriental-Area-Rug/dp/B0CFY66MZG",
-    "https://www.amazon.com/Utopia-Towels-Luxurious-Absorbent-Perfect/dp/B07SW4HB3N",
-
-    # ── Furniture ─────────────────────────────────────────────────────────────
-    "https://www.amazon.com/Flash-Furniture-Adjustable-Ergonomic-Swivel/dp/B08BFNRM4N",
-    "https://www.amazon.com/Hbada-Ergonomic-Office-Chair-Support/dp/B07SDMFCH2",
-    "https://www.amazon.com/SONGMICS-Storage-Ottoman-Footstool-ULSF002/dp/B06XGJ2GGN",
-    "https://www.amazon.com/Christopher-Knight-Home-Accent-Chair/dp/B07BFHF14N",
-    "https://www.amazon.com/Zinus-Oluwafemi-Upholstered-Platform-Mattress/dp/B072BSTNCY",
-
-    # ── Board Games & Collectibles ────────────────────────────────────────────
-    "https://www.amazon.com/Catan-Board-Game/dp/B00U26V4VQ",
-    "https://www.amazon.com/Ticket-Ride-Strategy-Board-Game/dp/B000BW7FKY",
-    "https://www.amazon.com/Codenames-Strategy-Party-Card-Game/dp/B014Q1XX9S",
-    "https://www.amazon.com/Hasbro-Monopoly-Classic-Game/dp/B00SIVLTM4",
-    "https://www.amazon.com/Jenga-Game-54-Hardwood-Blocks/dp/B078Q1D5JR",
-
-    # ── Outdoor & Patio ───────────────────────────────────────────────────────
-    "https://www.amazon.com/Coleman-Portable-Camping-Chair-Arm/dp/B000ARPS5A",
-    "https://www.amazon.com/TIMBER-RIDGE-Zero-Gravity-Recliner/dp/B01A4YQM3G",
+    # ── Weber / Solo Stove (high-value outdoor) ───────────────────────────────
     "https://www.amazon.com/Weber-Spirit-II-E-310-Liquid/dp/B074B3PRYN",
     "https://www.amazon.com/Solo-Stove-Bonfire-Lightweight-Portable/dp/B09GR7NJWL",
-    "https://www.amazon.com/Outsunny-Umbrella-Patio-Cantilever-Hanging/dp/B09CDQHVQR",
-    "https://www.amazon.com/EVER-ADVANCED-Lightweight-Outdoor-Breathable/dp/B07PHXFHRF",
-
-    # ── Luggage & Travel ──────────────────────────────────────────────────────
-    "https://www.amazon.com/AmazonBasics-Hardside-Spinner-Luggage-Black/dp/B07X8QLPT1",
-    "https://www.amazon.com/Travelpro-Maxlite-Lightweight-Expandable-Suitcase/dp/B07R4JZZM4",
-    "https://www.amazon.com/Samsonite-Omni-PC-Hardside-Spinner/dp/B009WBDPYU",
-    "https://www.amazon.com/BAGSMART-Electronic-Organizer-Universal-Accessories/dp/B074W94QBJ",
-    "https://www.amazon.com/AmazonBasics-Packing-Travel-Cubes-Set/dp/B014VBGBER",
-
-    # ── Sports & Outdoors ─────────────────────────────────────────────────────
-    "https://www.amazon.com/Intex-Explorer-K2-Kayak-Person/dp/B002IXNXXY",
-    "https://www.amazon.com/Wilson-Adult-Recreational-Tennis-Racket/dp/B008G8BPRW",
-    "https://www.amazon.com/Spalding-NBA-Varsity-Outdoor-Basketball/dp/B07WNWJCQJ",
-    "https://www.amazon.com/Franklin-Sports-Pickleball-Paddle-Balls/dp/B07MK9LBHZ",
-    "https://www.amazon.com/Callaway-Strata-Complete-Golf-Set/dp/B007Q3JQA4",
-    "https://www.amazon.com/HEAD-Ti-S6-Racquets/dp/B000BT01BG",
-
-    # ── Electric Bikes & Scooters ─────────────────────────────────────────────
-    "https://www.amazon.com/Lectric-XP-Trike-Electric-Bike/dp/B0BTTQPG76",
-    "https://www.amazon.com/Razor-E300-Electric-Scooter-Black/dp/B000BGJPNW",
-    "https://www.amazon.com/Segway-Ninebot-Electric-Kick-Scooter/dp/B07K7XCLPD",
-    "https://www.amazon.com/Gotrax-GXL-V2-Commuting-Electric/dp/B07J7MNKGZ",
-    "https://www.amazon.com/Hiboy-S2-Electric-Scooter-Adults/dp/B07YQLM1X9",
-
-    # ── Gardening ─────────────────────────────────────────────────────────────
-    "https://www.amazon.com/Fiskars-Bypass-Pruning-Shears-Gardening/dp/B00004SD5U",
-    "https://www.amazon.com/Garden-Hose-Expandable-50ft/dp/B078WGVGKY",
-    "https://www.amazon.com/Miracle-Gro-Performance-Organics-Purpose/dp/B07BKCZR2N",
-    "https://www.amazon.com/Scotts-Turf-Builder-Lawn-Food/dp/B000N4FKQG",
-    "https://www.amazon.com/VIVOSUN-Hydroponic-Grow-Tent-Mylar/dp/B075BWFGKZ",
-    "https://www.amazon.com/Rain-Bird-ST8I-WiFi-Smart-Irrigation/dp/B07BGYX2TZ",
-    "https://www.amazon.com/Keter-Cortina-Outdoor-Storage-Resin/dp/B09Q4YFZTT",
-
-    # ── Health & Wellness Devices ─────────────────────────────────────────────
-    "https://www.amazon.com/Fitbit-Advanced-Tracker-Health-Monitoring/dp/B0BJWJWSVC",
 
 ]
 
@@ -345,23 +291,36 @@ BESTBUY_PRODUCTS = [
     "https://www.bestbuy.com/site/microsoft-xbox-series-x-1tb-console/6428324.p",
     "https://www.bestbuy.com/site/nintendo-switch-oled-model-w-neon-red-neon-blue-joy-con/6470924.p",
     "https://www.bestbuy.com/site/nintendo-switch-2/6614313.p",
+    "https://www.bestbuy.com/site/nintendo-switch-2-mario-kart-world-bundle/6625683.p",   # Bundle sells faster than standalone
+    "https://www.bestbuy.com/site/nintendo-switch-2-joy-con-2-neon-red-neon-blue/6614316.p",  # Sells out independently
+    "https://www.bestbuy.com/site/nintendo-switch-2-pro-controller/6614318.p",
+    "https://www.bestbuy.com/site/meta-quest-3-128gb/6601354.p",                          # Quest 3 (better flip than 3S)
     "https://www.bestbuy.com/site/meta-quest-3s-128gb/6622623.p",                         # Meta Quest 3S (2025)
 
-    # ── RTX 5090 / 5080 GPUs (most in-demand drops) ───────────────────────────
+    # ── RTX 5090 / 5080 / 5070 Ti GPUs ──────────────────────────────────────
     "https://www.bestbuy.com/site/nvidia-geforce-rtx-5090-founders-edition/6614151.p",
     "https://www.bestbuy.com/site/nvidia-geforce-rtx-5080-founders-edition/6614153.p",
+    "https://www.bestbuy.com/site/nvidia-geforce-rtx-5070-ti-founders-edition/6614155.p",  # $749 — sells out in <2 min
     "https://www.bestbuy.com/site/asus-rog-strix-geforce-rtx-5090/6614120.p",
     "https://www.bestbuy.com/site/msi-geforce-rtx-5090-gaming-x-trio/6616090.p",
+    # AMD RX 9070 XT — best value GPU 2025, $599 MSRP, healthier stock than RTX
+    "https://www.bestbuy.com/site/sapphire-nitro-plus-radeon-rx-9070-xt/6627531.p",
+    "https://www.bestbuy.com/site/asus-tuf-gaming-radeon-rx-9070-xt/6627443.p",
 
-    # ── Pokemon TCG (Best Buy carries these — sell out fast) ──────────────────
-    # SKU 6606082 currently inactive — keeping placeholder for restock tracking
+    # ── Pokemon TCG (Best Buy restocks 6AM–10AM Tue–Thu) ─────────────────────
+    "https://www.bestbuy.com/site/pokemon-destined-rivals-elite-trainer-box/6632801.p",   # May 2025 — Mewtwo ex SIR $500+
+    "https://www.bestbuy.com/site/pokemon-mega-evolution-ascended-heroes-etb/6641820.p",  # Jan 2026 — Mega Charizard X
 
     # ── LEGO ─────────────────────────────────────────────────────────────────
     "https://www.bestbuy.com/site/lego-technic-lamborghini-huracan-tecnica-42161/6540666.p",
+    "https://www.bestbuy.com/site/lego-icons-japanese-red-maple-bonsai-tree-10348/6632550.p",  # Botanical — retires = 30-50% jump
+    "https://www.bestbuy.com/site/lego-star-wars-millennium-falcon-25th-anniversary-75375/6560234.p",
 
     # ── Apple ─────────────────────────────────────────────────────────────────
     "https://www.bestbuy.com/site/apple-airpods-pro-2nd-generation-with-magsafe-case-usb-c/6447382.p",
-    "https://www.bestbuy.com/site/apple-watch-series-10-gps-42mm/6572678.p",              # Apple Watch S10
+    "https://www.bestbuy.com/site/apple-airpods-4-active-noise-cancellation/6447384.p",   # AirPods 4 ANC — frequent 15-20% drops
+    "https://www.bestbuy.com/site/apple-watch-series-10-gps-42mm/6572678.p",              # Apple Watch S10 42mm
+    "https://www.bestbuy.com/site/apple-watch-series-10-gps-46mm/6572679.p",              # Apple Watch S10 46mm — better flip
     "https://www.bestbuy.com/site/apple-macbook-air-13-inch-laptop-apple-m3/6565837.p",
     "https://www.bestbuy.com/site/apple-macbook-pro-14-inch-laptop-apple-m4/6602743.p",   # MacBook Pro M4
     "https://www.bestbuy.com/site/apple-ipad-air-11-inch-m2/6533554.p",                   # iPad Air M2
@@ -373,8 +332,10 @@ BESTBUY_PRODUCTS = [
     "https://www.bestbuy.com/site/samsung-galaxy-buds3-pro-wireless-earbud-headphones/6585614.p",          # Buds3 Pro (replaces Buds FE)
 
     # ── TVs ───────────────────────────────────────────────────────────────────
-    "https://www.bestbuy.com/site/samsung-65-class-ls03d-the-frame-series-qled-4k-2024/6576593.p",  # Frame 2024
-    "https://www.bestbuy.com/site/lg-65-class-c4-series-oled-evo-4k-uhd-smart-webos-tv-2024/6578042.p",  # LG C4 (replaces C3)
+    "https://www.bestbuy.com/site/samsung-65-class-ls03d-the-frame-series-qled-4k-2024/6576593.p",  # Frame 2024 65"
+    "https://www.bestbuy.com/site/lg-65-class-c4-series-oled-evo-4k-uhd-smart-webos-tv-2024/6578042.p",  # LG C4 65"
+    "https://www.bestbuy.com/site/lg-77-class-c4-series-oled-evo-4k-uhd-smart-webos-tv-2024/6578043.p",  # LG C4 77" — $300+ flip potential
+    "https://www.bestbuy.com/site/samsung-65-class-qn90d-neo-qled-4k-2024/6586989.p",  # Samsung QN90D 65" — flagship Neo QLED
     "https://www.bestbuy.com/site/tcl-55-class-q6-qled-4k-smart-google-tv/6543914.p",
 
     # ── Smart Home ────────────────────────────────────────────────────────────
@@ -396,6 +357,7 @@ BESTBUY_PRODUCTS = [
     "https://www.bestbuy.com/site/razer-blackshark-v2-pro-wireless-gaming-headset/6538210.p",    # V2 Pro 2023
     "https://www.bestbuy.com/site/nintendo-switch-pro-controller/5748618.p",                     # new SKU
     "https://www.bestbuy.com/site/sony-playstation-5-dualsense-wireless-controller-white/6430163.p",
+    "https://www.bestbuy.com/site/sony-playstation-5-dualsense-edge-wireless-controller/6523457.p",  # $199, 20% drops = $40 margin
 
     # ── Monitors & Displays ───────────────────────────────────────────────────
     "https://www.bestbuy.com/site/lg-ultragear-27-qhd-180hz-1ms-freesync-gaming-monitor/6593349.p",   # LG 27GS60QC
@@ -410,12 +372,17 @@ BESTBUY_PRODUCTS = [
 # ── Walmart ───────────────────────────────────────────────────────────────────
 WALMART_PRODUCTS = [
 
-    # ── Pokemon TCG Walmart Exclusives (sell out FASTEST at Walmart) ──────────
+    # ── Pokemon TCG Walmart Exclusives (sell out FASTEST — Mon-Fri 7AM) ───────
     "https://www.walmart.com/ip/Pokemon-Prismatic-Evolutions-Elite-Trainer-Box/13816151308",
     "https://www.walmart.com/ip/Pokemon-TCG-151-Ultra-Premium-Collection/3606845180",
+    "https://www.walmart.com/ip/Pokemon-Destined-Rivals-Elite-Trainer-Box/15823401044",    # May 2025
+    "https://www.walmart.com/ip/Pokemon-Mega-Evolution-Ascended-Heroes-ETB/16231054802",   # Jan 2026
 
-    # ── Funko Pop Exclusives ──────────────────────────────────────────────────
+    # ── Funko Pop Exclusives (Walmart) ────────────────────────────────────────
     "https://www.walmart.com/ip/Funko-Pop-Dragon-Ball-Super-Zamasu/153254915",
+    "https://www.walmart.com/ip/Funko-Pop-Dragon-Ball-Goku-Ultra-Instinct-Walmart-Exclusive/673956491",  # $14 → $40-60
+    "https://www.walmart.com/ip/Funko-Pop-Naruto-Baryon-Mode-Walmart-Exclusive/2891024034",              # Naruto exclusive
+    "https://www.walmart.com/ip/Funko-Pop-One-Piece-Gear-5-Luffy-Walmart-Exclusive/4813209187",          # $14 → $35-50
 
     # ── Gaming Consoles ───────────────────────────────────────────────────────
     "https://www.walmart.com/ip/PlayStation-5-Console/363472942",
@@ -424,6 +391,9 @@ WALMART_PRODUCTS = [
     "https://www.walmart.com/ip/Nintendo-Switch-OLED-Model-w-Neon-Red-Neon-Blue-Joy-Con/910582148",
     "https://www.walmart.com/ip/Nintendo-Switch-OLED-Model-w-White-Joy-Con/493454737",
     "https://www.walmart.com/ip/Nintendo-Switch-2/15949610846",
+    "https://www.walmart.com/ip/Nintendo-Switch-2-Mario-Kart-World-Bundle/17342201084",
+    "https://www.walmart.com/ip/Nintendo-Switch-2-Joy-Con-2-Neon-Red-Blue/17342203011",
+    "https://www.walmart.com/ip/Nintendo-Switch-2-Pro-Controller/17342204522",
     "https://www.walmart.com/ip/Nintendo-Switch-Pro-Controller/319026465",
     "https://www.walmart.com/ip/Xbox-Series-X-Console/443574645",
     "https://www.walmart.com/ip/Xbox-Series-S-512GB-All-Digital-Console/408062341",
@@ -433,8 +403,8 @@ WALMART_PRODUCTS = [
     # ── LEGO ─────────────────────────────────────────────────────────────────
     "https://www.walmart.com/ip/LEGO-Icons-Eiffel-Tower/3792956367",
     "https://www.walmart.com/ip/LEGO-Star-Wars-Millennium-Falcon/3474788564",
+    "https://www.walmart.com/ip/LEGO-Icons-Japanese-Red-Maple-Bonsai-Tree-10348/5348201034",  # Jun 2025 Botanical
     "https://www.walmart.com/ip/LEGO-City-Police-Station-60316/1388823900",
-    "https://www.walmart.com/ip/LEGO-Creator-3-in-1-Exotic-Parrot-31136/4006938900",
 
     # ── Electronics ───────────────────────────────────────────────────────────
     "https://www.walmart.com/ip/Apple-AirPods-Pro-2nd-Gen-with-MagSafe-Charging-Case-USB-C/2401728848",
@@ -487,18 +457,28 @@ TARGET_PRODUCTS = [
     "https://www.target.com/p/pokemon-prismatic-evolutions-elite-trainer-box/-/A-93954435",
     "https://www.target.com/p/pokemon-trading-card-game-paldean-fates-elite-trainer-box/-/A-89432659",
     "https://www.target.com/p/pokemon-temporal-forces-booster-bundle/-/A-89952655",
+    "https://www.target.com/p/pokemon-destined-rivals-elite-trainer-box/-/A-95812044",     # May 2025 — Mewtwo ex SIR $500+
+    "https://www.target.com/p/pokemon-destined-rivals-booster-bundle/-/A-95812048",        # $25-30 — flips in minutes
+    "https://www.target.com/p/pokemon-mega-evolution-ascended-heroes-etb/-/A-96442301",    # Jan 2026 — Mega Charizard X chase
 
     # ── LEGO Target Exclusives ────────────────────────────────────────────────
     "https://www.target.com/p/lego-icons-botanical-collection-wildflower-bouquet/-/A-86216138",
     "https://www.target.com/p/lego-star-wars-millennium-falcon-75375/-/A-89144452",
+    "https://www.target.com/p/lego-icons-japanese-red-maple-bonsai-tree-10348/-/A-95031220",  # Jun 2025 — retires = 30-50% jump
 
     # ── Funko Pop Target Exclusives ───────────────────────────────────────────
     "https://www.target.com/p/funko-pop-obi-wan-kenobi-star-wars-exclusive/-/A-90522056",
     "https://www.target.com/p/funko-pop-daredevil-marvel-exclusive/-/A-90522051",
+    "https://www.target.com/p/funko-pop-one-piece-gear-5-luffy-target-exclusive/-/A-93471802",     # $14 → $50-80 secondary
+    "https://www.target.com/p/funko-pop-yugioh-slifer-sky-dragon-6in-target-exclusive/-/A-92841055", # $28 → $136 secondary — grail
+    "https://www.target.com/p/funko-pop-tanjiro-demon-slayer-target-exclusive/-/A-91203847",       # Anime exclusives = high flip
 
     # ── Gaming Consoles ───────────────────────────────────────────────────────
     "https://www.target.com/p/sony-playstation-5-pro-console/-/A-93620188",
     "https://www.target.com/p/nintendo-switch-2/-/A-94693225",
+    "https://www.target.com/p/nintendo-switch-2-mario-kart-world-bundle/-/A-94693230",
+    "https://www.target.com/p/nintendo-switch-2-joy-con-2-neon-red-blue/-/A-94693235",
+    "https://www.target.com/p/nintendo-switch-2-pro-controller/-/A-94693240",
     "https://www.target.com/p/xbox-series-s-512gb-console/-/A-80931811",
     "https://www.target.com/p/meta-quest-3-mixed-reality-headset-128gb/-/A-89254004",
 
@@ -617,6 +597,20 @@ FOOTSITES_PRODUCTS = [
     "https://www.footlocker.com/product/adidas-originals-gazelle-indoor-mens/JH5405.html",
     "https://www.footlocker.com/product/adidas-originals-forum-low-cl-mens/HQ7474.html",
 
+    # ── Foot Locker — Nike Kobe Protros (Mar 23 2026) ────────────────────────
+    "https://www.footlocker.com/product/nike-kobe-af1-low-protro-lower-merion-aces/IB0018101.html",
+    "https://www.footlocker.com/product/nike-kobe-dunk-low-protro-lower-merion-aces/IV0263100.html",
+
+    # ── Foot Locker — Air Max 95 OG Neon (30th Anniversary, Mar 5 2026) ─────
+    "https://www.footlocker.com/product/nike-air-max-95-og-neon/HM0675001.html",   # $300-400+ resale
+
+    # ── Foot Locker — Air Jordan 1 Royal 2026 ────────────────────────────────
+    "https://www.footlocker.com/product/jordan-retro-1-high-og-royal-mens/IQ5495005.html",
+
+    # ── Foot Locker — New Balance 1906R ──────────────────────────────────────
+    "https://www.footlocker.com/product/new-balance-1906r-mens/M1906RGL.html",
+    "https://www.footlocker.com/product/new-balance-1906r-mens/M1906RCA.html",
+
     # ── User-flagged drops ────────────────────────────────────────────────────
     "https://www.footlocker.com/product/nike-sneaker/IF4396100.html",   # IF4396-100 drop
 
@@ -650,6 +644,13 @@ FOOTSITES_PRODUCTS = [
     "https://www.champssports.com/product/jordan-spizike-low-mens/Q1759001.html",
     "https://www.champssports.com/product/jordan-spizike-low-mens/Q1759005.html",
     "https://www.champssports.com/product/jordan-spizike-low-v2-mens/H1782200.html",
+
+    # ── Champs Sports — Kobe Protros (Mar 23 2026) ───────────────
+    "https://www.champssports.com/product/nike-kobe-af1-low-protro-lower-merion-aces/IB0018101.html",
+    "https://www.champssports.com/product/nike-kobe-dunk-low-protro-lower-merion-aces/IV0263100.html",
+
+    # ── Champs Sports — Air Max 95 OG Neon (30th Anniv.) ─────────────
+    "https://www.champssports.com/product/nike-air-max-95-og-neon/HM0675001.html",
 
     # ── Kids Foot Locker ──────────────────────────────────────────────────────
     "https://www.kidsfootlocker.com/product/jordan-air-jordan-3-retro-og-boys-grade-school/B8968004.html",
@@ -735,6 +736,23 @@ NIKE_STYLE_CODES = [
 
     # ── Air Jordan 2 ─────────────────────────────────────────────────────────
     "DX2454-101",  # AJ2 "White/Varsity Royal"
+
+    # ── Air Jordan 4 OG Bred 2026 ────────────────────────────────────────────
+    "FV5029-001",  # AJ4 OG "Bred" Nov 27 2026 — true OG nubuck build, every Bred retro 2-3×
+
+    # ── Virgil Abloh / Off-White collabs ─────────────────────────────────────
+    "AA3834-100",  # Off-White x AJ1 High "Alaska" Apr 2026 — posthumous Virgil, $700-1,200+
+
+    # ── Nike Kobe Line (2025-2026 Protro wave) ────────────────────────────────
+    "IB0018-101",  # Kobe AF1 Low Protro "Lower Merion Aces" Mar 23 2026 — $300-500 resale
+    "IV0263-100",  # Kobe Dunk Low Protro "Lower Merion Aces" Mar 23 2026 — new silhouette $350-600
+
+    # ── Air Jordan 1 2026 drops ───────────────────────────────────────────────
+    "DZ5485-003",  # AJ1 High OG "All-Star" Feb 2026 — All-Star drops always oversubscribed
+    "IQ5495-005",  # AJ1 High OG "Royal" Oct 2026 — iconic colorway, $350-500
+
+    # ── Air Max 95 (30th Anniversary) ────────────────────────────────────────
+    "HM0675-001",  # Air Max 95 OG "Neon" Mar 5 2026 — 30th anniv of the iconic Neon, $300-400+
 
     # ── Nike Dunk Low ─────────────────────────────────────────────────────────
     "DD1391-100",  # Panda (restock)
