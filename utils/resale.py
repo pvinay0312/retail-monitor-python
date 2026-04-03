@@ -5,6 +5,9 @@ estimated resale price ranges + eBay sold listings / StockX links.
 Estimates are rough multipliers based on category trends. Always link to
 eBay sold listings so members can verify real-time prices with one click.
 """
+from __future__ import annotations
+
+from typing import Optional
 from urllib.parse import quote_plus
 
 # category key → detection keywords + resale multiplier range
@@ -59,7 +62,7 @@ _CATEGORIES: dict[str, dict] = {
 }
 
 
-def get_resale_info(name: str, price: float) -> dict | None:
+def get_resale_info(name: str, price: float) -> Optional[dict]:
     """
     Return resale estimate dict for resale-worthy products, else None.
 

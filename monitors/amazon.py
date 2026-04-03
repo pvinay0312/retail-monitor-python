@@ -40,7 +40,7 @@ from utils.storage import load, save
 log = logging.getLogger(__name__)
 
 DEAL_THRESHOLD   = 0.20        # 20% off minimum (industry standard for cook groups)
-MIN_SAVINGS      = 15.0        # must save at least $15 — filters cheap-item noise
+MIN_SAVINGS      = 10.0        # must save at least $10 — filters cheap-item noise
 DEAL_COOLDOWN    = 12 * 3600   # 12h hard block after any alert
 CAPTCHA_BACKOFF  = 7200        # 2 hours if CAPTCHA detected
 
@@ -193,7 +193,17 @@ class AmazonMonitor(BaseMonitor):
         elif prev_price and prev_price > 0 and prev_price > price:
             discount_pct = (prev_price - effective_price) / prev_price
 
-        absolute_savings = (was_price - effective_price) if was_price else 0.0
+        # Absolute savings: prefer was_price (page-shown strikethrough), fall back to
+        # prev_price (our tracked historical price). Without this fallback, products
+        # that don't show a was_price in Amazon's static HTML always have savings=$0
+        # and big_drop is always False — silencing the monitor entirely.
+        if was_price and was_price > effective_price:
+            absolute_savings = was_price - effective_price
+        elif prev_price and prev_price > effective_price:
+            absolute_savings = prev_price - effective_price
+        else:
+            absolute_savings = 0.0
+
         is_freebie       = effective_price <= 0.01
         big_drop         = (discount_pct >= DEAL_THRESHOLD
                             and absolute_savings >= MIN_SAVINGS)
